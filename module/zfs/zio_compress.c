@@ -50,24 +50,25 @@ unsigned long zio_decompress_fail_fraction = 0;
  * Compression vectors.
  */
 zio_compress_info_t zio_compress_table[ZIO_COMPRESS_FUNCTIONS] = {
-	{"inherit",	0,	NULL,		NULL, NULL},
-	{"on",		0,	NULL,		NULL, NULL},
-	{"uncompressed", 0,	NULL,		NULL, NULL},
-	{"lzjb",	0,	lzjb_compress,	lzjb_decompress, NULL},
-	{"empty",	0,	NULL,		NULL, NULL},
-	{"gzip-1",	1,	gzip_compress,	gzip_decompress, NULL},
-	{"gzip-2",	2,	gzip_compress,	gzip_decompress, NULL},
-	{"gzip-3",	3,	gzip_compress,	gzip_decompress, NULL},
-	{"gzip-4",	4,	gzip_compress,	gzip_decompress, NULL},
-	{"gzip-5",	5,	gzip_compress,	gzip_decompress, NULL},
-	{"gzip-6",	6,	gzip_compress,	gzip_decompress, NULL},
-	{"gzip-7",	7,	gzip_compress,	gzip_decompress, NULL},
-	{"gzip-8",	8,	gzip_compress,	gzip_decompress, NULL},
-	{"gzip-9",	9,	gzip_compress,	gzip_decompress, NULL},
-	{"zle",		64,	zle_compress,	zle_decompress, NULL},
-	{"lz4",		0,	lz4_compress_zfs, lz4_decompress_zfs, NULL},
+	{"inherit",	0,	NULL,		NULL, NULL, NULL},
+	{"on",		0,	NULL,		NULL, NULL, NULL},
+	{"uncompressed", 0,	NULL,		NULL, NULL, NULL},
+	{"lzjb",	0,	lzjb_compress,	lzjb_decompress, NULL, NULL},
+	{"empty",	0,	NULL,		NULL, NULL, NULL},
+	{"gzip-1",	1,	gzip_compress,	gzip_decompress, NULL, NULL},
+	{"gzip-2",	2,	gzip_compress,	gzip_decompress, NULL, NULL},
+	{"gzip-3",	3,	gzip_compress,	gzip_decompress, NULL, NULL},
+	{"gzip-4",	4,	gzip_compress,	gzip_decompress, NULL, NULL},
+	{"gzip-5",	5,	gzip_compress,	gzip_decompress, NULL, NULL},
+	{"gzip-6",	6,	gzip_compress,	gzip_decompress, NULL, NULL},
+	{"gzip-7",	7,	gzip_compress,	gzip_decompress, NULL, NULL},
+	{"gzip-8",	8,	gzip_compress,	gzip_decompress, NULL, NULL},
+	{"gzip-9",	9,	gzip_compress,	gzip_decompress, NULL, NULL},
+	{"zle",		64,	zle_compress,	zle_decompress, NULL, NULL},
+	{"lz4",		0,	lz4_compress_zfs, lz4_decompress_zfs, NULL,
+	    NULL},
 	{"zstd",	ZIO_ZSTD_LEVEL_DEFAULT,	zfs_zstd_compress,
-	    zfs_zstd_decompress, zfs_zstd_decompress_level},
+	    zfs_zstd_decompress, zfs_zstd_decompress_level, NULL},
 };
 
 uint8_t
@@ -131,7 +132,8 @@ zio_compress_data(enum zio_compress c, abd_t *src, void *dst, size_t s_len,
 	zio_compress_info_t *ci = &zio_compress_table[c];
 
 	ASSERT((uint_t)c < ZIO_COMPRESS_FUNCTIONS);
-	ASSERT((uint_t)c == ZIO_COMPRESS_EMPTY || ci->ci_compress != NULL);
+	ASSERT((uint_t)c == ZIO_COMPRESS_EMPTY || ci->ci_compress != NULL ||
+	    ci->ci_compress_abd != NULL);
 
 	/*
 	 * If the data is all zeroes, we don't even need to allocate
@@ -161,10 +163,27 @@ zio_compress_data(enum zio_compress c, abd_t *src, void *dst, size_t s_len,
 		ASSERT3U(complevel, !=, ZIO_COMPLEVEL_INHERIT);
 	}
 
-	/* No compression algorithms can read from ABDs directly */
-	void *tmp = abd_borrow_buf_copy(src, s_len);
-	c_len = ci->ci_compress(tmp, dst, s_len, d_len, complevel);
-	abd_return_buf(src, tmp, s_len);
+	if (ci->ci_compress_abd) {
+		c_len = ci->ci_compress_abd(src, dst, s_len, d_len,
+		    complevel);
+		if (c_len < 0 && ci->ci_compress) {
+			/*
+			 * Hardware compression failed, fall back to
+			 * software.
+			 */
+			void *tmp = abd_borrow_buf_copy(src, s_len);
+			c_len = ci->ci_compress(tmp, dst, s_len, d_len,
+			    ci->ci_level);
+			abd_return_buf(src, tmp, s_len);
+		} else if (c_len < 0) {
+			c_len = s_len;
+		}
+	} else {
+		/* No compression algorithms can read from ABDs directly */
+		void *tmp = abd_borrow_buf_copy(src, s_len);
+		c_len = ci->ci_compress(tmp, dst, s_len, d_len, complevel);
+		abd_return_buf(src, tmp, s_len);
+	}
 
 	if (c_len > d_len)
 		return (s_len);

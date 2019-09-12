@@ -139,6 +139,8 @@ typedef int zio_getlevel_func_t(void *src, size_t s_len, uint8_t *level);
  * This is helpful if you have both compressed ARC and scatter ABDs enabled,
  * but is not a requirement for all compression algorithms.
  */
+typedef size_t zio_compress_abd_func_t(abd_t *src, void *dst,
+    size_t s_len, size_t d_len, int);
 typedef int zio_decompress_abd_func_t(abd_t *src, void *dst,
     size_t s_len, size_t d_len, int);
 /*
@@ -150,6 +152,7 @@ typedef const struct zio_compress_info {
 	zio_compress_func_t		*ci_compress;
 	zio_decompress_func_t		*ci_decompress;
 	zio_decompresslevel_func_t	*ci_decompress_level;
+	zio_compress_abd_func_t		*ci_compress_abd;
 } zio_compress_info_t;
 
 extern zio_compress_info_t zio_compress_table[ZIO_COMPRESS_FUNCTIONS];
