@@ -207,6 +207,7 @@
 #include <sys/zfeature.h>
 #include <sys/zcp.h>
 #include <sys/zio_checksum.h>
+#include <sys/zio_compress.h>
 #include <sys/vdev_removal.h>
 #include <sys/vdev_impl.h>
 #include <sys/vdev_initialize.h>
@@ -7651,6 +7652,7 @@ zfs_kmod_fini(void)
 {
 	zfsdev_state_t *zs, *zsnext = NULL;
 
+	noload_disable();
 	zfsdev_detach();
 
 	mutex_destroy(&zfsdev_state_lock);

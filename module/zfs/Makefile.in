@@ -61,6 +61,7 @@ $(MODULE)-objs += metaslab.o
 $(MODULE)-objs += mmp.o
 $(MODULE)-objs += multilist.o
 $(MODULE)-objs += objlist.o
+$(MODULE)-objs += noload.o
 $(MODULE)-objs += pathname.o
 $(MODULE)-objs += range_tree.o
 $(MODULE)-objs += refcount.o

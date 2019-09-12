@@ -69,6 +69,12 @@ zio_compress_info_t zio_compress_table[ZIO_COMPRESS_FUNCTIONS] = {
 	    NULL},
 	{"zstd",	ZIO_ZSTD_LEVEL_DEFAULT,	zfs_zstd_compress,
 	    zfs_zstd_decompress, zfs_zstd_decompress_level, NULL},
+#if defined(_KERNEL) && defined(HAVE_NVME_ALGO)
+	{"gzip-noload",	0,	gzip_compress,	gzip_decompress, NULL,
+	    noload_compress, noload_decompress},
+#else
+	{"gzip-noload",	0,	NULL,		NULL,	NULL,	NULL},
+#endif
 };
 
 uint8_t
@@ -130,6 +136,9 @@ zio_compress_data(enum zio_compress c, abd_t *src, void *dst, size_t s_len,
 	size_t c_len, d_len;
 	uint8_t complevel;
 	zio_compress_info_t *ci = &zio_compress_table[c];
+
+	if (c == ZIO_COMPRESS_GZIP_NOLOAD && !ci->ci_compress_abd)
+		return (s_len);
 
 	ASSERT((uint_t)c < ZIO_COMPRESS_FUNCTIONS);
 	ASSERT((uint_t)c == ZIO_COMPRESS_EMPTY || ci->ci_compress != NULL ||

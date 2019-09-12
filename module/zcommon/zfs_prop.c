@@ -125,6 +125,8 @@ zfs_prop_init(void)
 		{ "gzip-7",	ZIO_COMPRESS_GZIP_7 },
 		{ "gzip-8",	ZIO_COMPRESS_GZIP_8 },
 		{ "gzip-9",	ZIO_COMPRESS_GZIP_9 },
+		{ "gzip-noload",
+				ZIO_COMPRESS_GZIP_NOLOAD },
 		{ "zle",	ZIO_COMPRESS_ZLE },
 		{ "lz4",	ZIO_COMPRESS_LZ4 },
 		{ "zstd",	ZIO_COMPRESS_ZSTD },
@@ -416,6 +418,9 @@ zfs_prop_init(void)
 	    ZIO_COMPRESS_DEFAULT, PROP_INHERIT,
 	    ZFS_TYPE_FILESYSTEM | ZFS_TYPE_VOLUME,
 	    "on | off | lzjb | gzip | gzip-[1-9] | zle | lz4 | "
+#ifdef HAVE_NVME_ALGO
+	    "gzip-noload | "
+#endif
 	    "zstd | zstd-[1-19] | "
 	    "zstd-fast-[1-10,20,30,40,50,60,70,80,90,100,500,1000]",
 	    "COMPRESS", compress_table);
