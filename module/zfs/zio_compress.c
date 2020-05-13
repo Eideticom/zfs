@@ -210,8 +210,19 @@ int
 zio_decompress_data(enum zio_compress c, abd_t *src, void *dst,
     size_t s_len, size_t d_len, uint8_t *level)
 {
-	void *tmp = abd_borrow_buf_copy(src, s_len);
-	int ret = zio_decompress_data_buf(c, tmp, dst, s_len, d_len, level);
+	zio_compress_info_t *ci = &zio_compress_table[c];
+	void *tmp;
+	int ret;
+
+	if (ci->ci_decompress_abd) {
+		ret = ci->ci_decompress_abd(src, dst, s_len, d_len,
+		    ci->ci_level);
+		if (!ret)
+			return (ret);
+	}
+
+	tmp = abd_borrow_buf_copy(src, s_len);
+	ret = zio_decompress_data_buf(c, tmp, dst, s_len, d_len, level);
 	abd_return_buf(src, tmp, s_len);
 
 	/*
