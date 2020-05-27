@@ -34,6 +34,7 @@ int nvme_algo_run(struct nvme_algo *alg, struct bio *src,
 		  u64 src_len, struct bio *dst, u64 *dst_len);
 struct nvme_algo *nvme_algo_find(const char *algo_name, const char *dev_name);
 void nvme_algo_put(struct nvme_algo *alg);
+const char *nvme_algo_name(struct nvme_algo *alg);
 
 static struct nvme_algo *noload_c_alg, *noload_d_alg;
 static atomic_t req_count;
@@ -124,6 +125,9 @@ static ssize_t __noload_run(struct nvme_algo *alg, abd_t *src, void *dst,
 
 	if (!alg)
 		return -1;
+
+	pr_info("ZFS JOB: %s slen=%zd dlen=%zd\n", nvme_algo_name(alg),
+		s_len, d_len);
 
 	bio_src = bio_kmalloc(GFP_KERNEL, s_len / PAGE_SIZE + 1);
 	if (!src)
