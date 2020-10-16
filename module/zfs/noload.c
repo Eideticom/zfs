@@ -30,6 +30,13 @@
 
 struct nvme_algo;
 
+struct noload_buffer {
+	struct bio *bio;
+	off_t pos;
+	void *padding;
+	bool filled;
+};
+
 int nvme_algo_run(struct nvme_algo *alg, struct bio *src,
 		  u64 src_len, struct bio *dst, u64 *dst_len);
 struct nvme_algo *nvme_algo_find(const char *algo_name, const char *dev_name);
@@ -72,7 +79,8 @@ void noload_release(void)
 		noload_disable();
 }
 
-static void bio_map_buf(struct bio *bio, void *data, unsigned int len)
+static void noload_map_buf(struct noload_buffer *nlbuf, void *data,
+			   unsigned int len)
 {
 	unsigned long kaddr = (unsigned long)data;
 	unsigned long end = (kaddr + len + PAGE_SIZE - 1) >> PAGE_SHIFT;
@@ -84,11 +92,20 @@ static void bio_map_buf(struct bio *bio, void *data, unsigned int len)
 	int offset, i;
 
 	offset = offset_in_page(kaddr);
+
+	WARN_ON(nlbuf->filled);
+
 	for (i = 0; i < nr_pages; i++) {
 		unsigned int bytes = PAGE_SIZE - offset;
 
 		if (len <= 0)
 			break;
+
+		//Skip the last page if it would be partial
+		if (bytes > len) {
+			nlbuf->filled = true;
+			break;
+		}
 
 		if (bytes > len)
 			bytes = len;
@@ -98,19 +115,20 @@ static void bio_map_buf(struct bio *bio, void *data, unsigned int len)
 		else
 			page = vmalloc_to_page(data);
 
-		bio_add_page(bio, page, bytes, offset);
+		bio_add_page(nlbuf->bio, page, bytes, offset);
 
 		data += bytes;
 		len -= bytes;
 		offset = 0;
+		nlbuf->pos += bytes;
 	}
 }
 
 static int abd_to_bio_cb(void *buf, size_t size, void *priv)
 {
-	struct bio *bio = priv;
+	struct noload_buffer *nlbuf = priv;
 
-	bio_map_buf(bio, buf, size);
+	noload_map_buf(nlbuf, buf, size);
 
 	return 0;
 }
@@ -118,6 +136,8 @@ static int abd_to_bio_cb(void *buf, size_t size, void *priv)
 static ssize_t __noload_run(struct nvme_algo *alg, abd_t *src, void *dst,
 			    size_t s_len, size_t d_len, int level)
 {
+	struct noload_buffer src_buf = {};
+	struct noload_buffer dst_buf = {};
 	struct bio *bio_src, *bio_dst;
 	u64 out_len = s_len;
 	int ret;
@@ -125,33 +145,65 @@ static ssize_t __noload_run(struct nvme_algo *alg, abd_t *src, void *dst,
 	if (!alg)
 		return -1;
 
-	bio_src = bio_kmalloc(GFP_KERNEL, s_len / PAGE_SIZE + 1);
-	if (!src)
-		return -1;
+	src_buf.padding = kzalloc(PAGE_SIZE, GFP_KERNEL);
+	dst_buf.padding = kzalloc(PAGE_SIZE, GFP_KERNEL);
 
-	bio_dst = bio_kmalloc(GFP_KERNEL, d_len / PAGE_SIZE + 1);
-	if (!dst) {
-		bio_put(bio_src);
-		return -1;
+	if (!src_buf.padding || !dst_buf.padding)
+		goto exit_free_padding;
+
+	src_buf.bio = bio_kmalloc(GFP_KERNEL, s_len / PAGE_SIZE + 1);
+	if (!src_buf.bio)
+		goto exit_free_padding;
+
+	dst_buf.bio = bio_kmalloc(GFP_KERNEL, d_len / PAGE_SIZE + 1);
+	if (!dst_buf.bio) {
+		bio_put(src_buf.bio);
+		goto exit_free_padding;
 	}
 
-	bio_src->bi_end_io = bio_put;
-	bio_dst->bi_end_io = bio_put;
+	src_buf.bio->bi_end_io = bio_put;
+	dst_buf.bio->bi_end_io = bio_put;
 
-	abd_iterate_func(src, 0, s_len, abd_to_bio_cb, bio_src);
+	abd_iterate_func(src, 0, s_len, abd_to_bio_cb, &src_buf);
+	if (src_buf.pos < s_len) {
+		BUG_ON(s_len - src_buf.pos > PAGE_SIZE);
+		abd_copy_to_buf_off(src_buf.padding, src,
+				    src_buf.pos, s_len - src_buf.pos);
+		bio_add_page(src_buf.bio, virt_to_page(src_buf.padding),
+			     ALIGN(s_len - src_buf.pos, 512), 0);
+	}
 
-	bio_map_buf(bio_dst, dst, d_len);
+	noload_map_buf(&dst_buf, dst, d_len);
+	if (dst_buf.pos < d_len) {
+		BUG_ON(d_len - dst_buf.pos > PAGE_SIZE);
+		bio_add_page(dst_buf.bio, virt_to_page(dst_buf.padding),
+			     ALIGN(d_len - dst_buf.pos, 512), 0);
+	}
 
-	ret = nvme_algo_run(alg, bio_src, s_len, bio_dst, &out_len);
+	ret = nvme_algo_run(alg, src_buf.bio, s_len, dst_buf.bio, &out_len);
 	if (ret) {
 		if (ret == -ENODEV) {
 			noload_disable();
-			return -1;
+			goto exit_free_padding;
 		}
 		out_len = s_len;
 	}
 
+	if (dst_buf.pos < out_len) {
+		BUG_ON(out_len - dst_buf.pos > PAGE_SIZE);
+		memcpy(dst + dst_buf.pos, dst_buf.padding,
+		       out_len - dst_buf.pos);
+	}
+
+	kfree(dst_buf.padding);
+	kfree(src_buf.padding);
+
 	return out_len;
+
+exit_free_padding:
+	kfree(dst_buf.padding);
+	kfree(src_buf.padding);
+	return -1;
 }
 
 size_t noload_compress(abd_t *src, void *dst, size_t s_len, size_t d_len,
