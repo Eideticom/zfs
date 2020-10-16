@@ -146,11 +146,10 @@ static ssize_t __noload_run(struct nvme_algo *alg, abd_t *src, void *dst,
 
 	ret = nvme_algo_run(alg, bio_src, s_len, bio_dst, &out_len);
 	if (ret) {
-		if (ret == -ENODEV) {
+		if (ret == -ENODEV)
 			noload_disable();
-			return -1;
-		}
-		out_len = s_len;
+
+		return -1;
 	}
 
 	return out_len;
