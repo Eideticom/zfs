@@ -121,7 +121,7 @@ static ssize_t __noload_run(struct nvme_algo *alg, abd_t *src, void *dst,
 			    size_t s_len, size_t d_len, int level)
 {
 	struct bio *bio_src, *bio_dst;
-	u64 out_len = s_len;
+	u64 out_len = d_len;
 	int ret;
 
 	if (!alg)
