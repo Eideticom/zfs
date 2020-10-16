@@ -28,6 +28,8 @@
 #include <sys/zfs_context.h>
 #include <sys/abd.h>
 
+#define MIN_CMP_SIZE (64 * 1024)
+
 struct nvme_algo;
 
 struct noload_buffer {
@@ -211,6 +213,9 @@ size_t noload_compress(abd_t *src, void *dst, size_t s_len, size_t d_len,
 		       int level)
 {
 	ssize_t ret;
+
+	if (s_len < MIN_CMP_SIZE)
+		return s_len;
 
 	ret = __noload_run(noload_c_alg, src, dst, s_len, d_len, level);
 	if (ret < 0)
