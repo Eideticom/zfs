@@ -95,6 +95,8 @@ static void noload_map_buf(struct noload_buffer *nlbuf, void *data,
 
 	WARN_ON(nlbuf->filled);
 
+	WARN_ON(!IS_ALIGNED(offset, 512));
+
 	for (i = 0; i < nr_pages; i++) {
 		unsigned int bytes = PAGE_SIZE - offset;
 
