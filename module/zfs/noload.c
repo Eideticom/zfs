@@ -86,6 +86,9 @@ static void bio_map_buf(struct bio *bio, void *data, unsigned int len)
 	int offset, i;
 
 	offset = offset_in_page(kaddr);
+
+	WARN_ON(!IS_ALIGNED(offset, 512));
+
 	for (i = 0; i < nr_pages; i++) {
 		unsigned int bytes = PAGE_SIZE - offset;
 
