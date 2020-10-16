@@ -182,11 +182,10 @@ static ssize_t __noload_run(struct nvme_algo *alg, abd_t *src, void *dst,
 
 	ret = nvme_algo_run(alg, src_buf.bio, s_len, dst_buf.bio, &out_len);
 	if (ret) {
-		if (ret == -ENODEV) {
+		if (ret == -ENODEV)
 			noload_disable();
-			goto exit_free_padding;
-		}
-		out_len = s_len;
+
+		goto exit_free_padding;
 	}
 
 	if (dst_buf.pos < out_len) {
