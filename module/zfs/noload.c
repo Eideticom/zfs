@@ -29,6 +29,7 @@
 #include <sys/abd.h>
 
 #define MIN_CMP_SIZE (64 * 1024)
+#define ALGO_ALIGN	512
 
 struct nvme_algo;
 
@@ -36,6 +37,11 @@ int nvme_algo_run(struct nvme_algo *alg, struct bio *src,
 		  u64 src_len, struct bio *dst, u64 *dst_len);
 struct nvme_algo *nvme_algo_find(const char *algo_name, const char *dev_name);
 void nvme_algo_put(struct nvme_algo *alg);
+
+struct bio_pad_data {
+	void *orig, *bounce;
+	size_t len;
+};
 
 static struct nvme_algo *noload_c_alg, *noload_d_alg;
 static atomic_t req_count;
@@ -74,7 +80,61 @@ void noload_release(void)
 		noload_disable();
 }
 
-static void bio_map_buf(struct bio *bio, void *data, unsigned int len)
+static void bio_copy_pad_endio(struct bio *bio)
+{
+	struct bio_pad_data *bpd = bio->bi_private;
+
+	memcpy(bpd->orig, bpd->bounce, bpd->len);
+
+	kfree(bpd->bounce);
+	kfree(bpd);
+	bio_put(bio);
+}
+
+static void bio_free_pad_endio(struct bio *bio)
+{
+	kfree(bio->bi_private);
+	bio_put(bio);
+}
+
+static int bio_bounce_pad(struct bio *bio, void *data, unsigned int len,
+			  bool is_dst)
+{
+	struct bio_pad_data *bpd;
+	void *bounce;
+
+	BUG_ON(bio->bi_private);
+	bounce = kzalloc(PAGE_SIZE, GFP_KERNEL);
+	if (!bounce)
+		return -ENOMEM;
+
+	if (is_dst) {
+		bpd = kmalloc(sizeof(*bpd), GFP_KERNEL);
+		if (!bpd) {
+			kfree(bounce);
+			return -ENOMEM;
+		}
+
+		bpd->orig = data;
+		bpd->bounce = bounce;
+		bpd->len = len;
+
+		bio->bi_private = bpd;
+		bio->bi_end_io = bio_copy_pad_endio;
+	} else {
+		memcpy(bounce, data, len);
+
+		bio->bi_private = bounce;
+		bio->bi_end_io = bio_free_pad_endio;
+	}
+
+	bio_add_page(bio, virt_to_page(bounce), ALIGN(len, ALGO_ALIGN), 0);
+
+	return 0;
+}
+
+static int bio_map_buf(struct bio *bio, void *data, unsigned int len,
+		       bool is_dst)
 {
 	unsigned long kaddr = (unsigned long)data;
 	unsigned long end = (kaddr + len + PAGE_SIZE - 1) >> PAGE_SHIFT;
@@ -95,8 +155,8 @@ static void bio_map_buf(struct bio *bio, void *data, unsigned int len)
 		if (len <= 0)
 			break;
 
-		if (bytes > len)
-			bytes = len;
+		if (bytes > len && !IS_ALIGNED(len, ALGO_ALIGN))
+			return bio_bounce_pad(bio, data, len, is_dst);
 
 		if (!is_vmalloc)
 			page = virt_to_page(data);
@@ -109,15 +169,15 @@ static void bio_map_buf(struct bio *bio, void *data, unsigned int len)
 		len -= bytes;
 		offset = 0;
 	}
+
+	return 0;
 }
 
 static int abd_to_bio_cb(void *buf, size_t size, void *priv)
 {
 	struct bio *bio = priv;
 
-	bio_map_buf(bio, buf, size);
-
-	return 0;
+	return bio_map_buf(bio, buf, size, false);
 }
 
 static ssize_t __noload_run(struct nvme_algo *alg, abd_t *src, void *dst,
@@ -143,9 +203,13 @@ static ssize_t __noload_run(struct nvme_algo *alg, abd_t *src, void *dst,
 	bio_src->bi_end_io = bio_put;
 	bio_dst->bi_end_io = bio_put;
 
-	abd_iterate_func(src, 0, s_len, abd_to_bio_cb, bio_src);
+	ret = abd_iterate_func(src, 0, s_len, abd_to_bio_cb, bio_src);
+	if (ret)
+		goto exit_bio_put;
 
-	bio_map_buf(bio_dst, dst, d_len);
+	ret = bio_map_buf(bio_dst, dst, d_len, true);
+	if (ret)
+		goto exit_src_cleanup;
 
 	ret = nvme_algo_run(alg, bio_src, s_len, bio_dst, &out_len);
 	if (ret) {
@@ -156,6 +220,15 @@ static ssize_t __noload_run(struct nvme_algo *alg, abd_t *src, void *dst,
 	}
 
 	return out_len;
+
+exit_src_cleanup:
+	kfree(bio_src->bi_private);
+
+exit_bio_put:
+	bio_put(bio_src);
+	bio_put(bio_dst);
+
+	return ret;
 }
 
 size_t noload_compress(abd_t *src, void *dst, size_t s_len, size_t d_len,
