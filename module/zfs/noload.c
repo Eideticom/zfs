@@ -86,6 +86,9 @@ static void bio_map_buf(struct bio *bio, void *data, unsigned int len)
 	int offset, i;
 
 	offset = offset_in_page(kaddr);
+
+	WARN_ON(!IS_ALIGNED(offset, 512));
+
 	for (i = 0; i < nr_pages; i++) {
 		unsigned int bytes = PAGE_SIZE - offset;
 
@@ -146,11 +149,10 @@ static ssize_t __noload_run(struct nvme_algo *alg, abd_t *src, void *dst,
 
 	ret = nvme_algo_run(alg, bio_src, s_len, bio_dst, &out_len);
 	if (ret) {
-		if (ret == -ENODEV) {
+		if (ret == -ENODEV)
 			noload_disable();
-			return -1;
-		}
-		out_len = s_len;
+
+		return -1;
 	}
 
 	return out_len;
