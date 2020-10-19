@@ -108,6 +108,8 @@ static int bio_bounce_pad(struct bio *bio, void *data, unsigned int len,
 	if (!bounce)
 		return -ENOMEM;
 
+	BUG_ON(len > PAGE_SIZE);
+
 	if (is_dst) {
 		bpd = kmalloc(sizeof(*bpd), GFP_KERNEL);
 		if (!bpd) {
