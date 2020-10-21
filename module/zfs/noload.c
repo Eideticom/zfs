@@ -88,12 +88,14 @@ static void bio_copy_pad_endio(struct bio *bio)
 
 	kfree(bpd->bounce);
 	kfree(bpd);
+	bio->bi_private = NULL;
 	bio_put(bio);
 }
 
 static void bio_free_pad_endio(struct bio *bio)
 {
 	kfree(bio->bi_private);
+	bio->bi_private = NULL;
 	bio_put(bio);
 }
 
@@ -178,8 +180,11 @@ static int bio_map_buf(struct bio *bio, void *data, unsigned int len,
 static int abd_to_bio_cb(void *buf, size_t size, void *priv)
 {
 	struct bio *bio = priv;
+	int rc;
 
-	return bio_map_buf(bio, buf, size, false);
+	rc = bio_map_buf(bio, buf, size, false);
+	if (rc)
+		pr_info("bio map failure %d %zu", rc, size);
 }
 
 static ssize_t __noload_run(struct nvme_algo *alg, abd_t *src, void *dst,
