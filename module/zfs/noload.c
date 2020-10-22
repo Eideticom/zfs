@@ -132,6 +132,7 @@ static int bio_bounce_pad(struct bio *bio, void *data, unsigned int len,
 		bio->bi_end_io = bio_free_pad_endio;
 	}
 
+	pr_info("noload_zrun add page %px %u, %u\n", bio, ALIGN(len, ALGO_ALIGN), len);
 	bio_add_page(bio, virt_to_page(bounce), ALIGN(len, ALGO_ALIGN), 0);
 
 	return 0;
@@ -167,6 +168,8 @@ static int bio_map_buf(struct bio *bio, void *data, unsigned int len,
 		else
 			page = vmalloc_to_page(data);
 
+		pr_info("noload_zrun add page %px %u\n", bio, bytes);
+
 		bio_add_page(bio, page, bytes, offset);
 
 		data += bytes;
@@ -185,6 +188,8 @@ static int abd_to_bio_cb(void *buf, size_t size, void *priv)
 	rc = bio_map_buf(bio, buf, size, false);
 	if (rc)
 		pr_info("bio map failure %d %zu", rc, size);
+
+	return rc;
 }
 
 static ssize_t __noload_run(struct nvme_algo *alg, abd_t *src, void *dst,
@@ -206,6 +211,8 @@ static ssize_t __noload_run(struct nvme_algo *alg, abd_t *src, void *dst,
 		bio_put(bio_src);
 		return -1;
 	}
+
+	pr_info("noload_zrun init %px %zu\n", bio_src, s_len);
 
 	bio_src->bi_end_io = bio_put;
 	bio_dst->bi_end_io = bio_put;
