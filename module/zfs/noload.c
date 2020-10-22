@@ -218,7 +218,7 @@ static ssize_t __noload_run(struct nvme_algo *alg, abd_t *src, void *dst,
 	if (ret)
 		goto exit_src_cleanup;
 
-	pr_info("noload_zrun %px %u %u\n", bio_src, bio_src->bi_iter.bi_size, bio_dst->bi_iter.bi_size);
+	pr_info("noload_zrun %px %u %u %zu\n", bio_src, bio_src->bi_iter.bi_size, bio_dst->bi_iter.bi_size, s_len);
 	ret = nvme_algo_run(alg, bio_src, s_len, bio_dst, &out_len);
 	if (ret) {
 		if (ret == -ENODEV)
