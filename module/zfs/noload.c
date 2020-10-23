@@ -170,7 +170,7 @@ static int bio_map_buf(struct bio *bio, void *data, unsigned int len,
 		else
 			page = vmalloc_to_page(data);
 
-		bio_add_page(bio, page, bytes, offset);
+		bio_add_page(bio, page, min(bytes, len), offset);
 
 		data += bytes;
 		len -= bytes;
