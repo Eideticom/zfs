@@ -150,12 +150,13 @@ static int bio_map_buf(struct bio *bio, void *data, unsigned int len,
 	int offset, i;
 
 	offset = offset_in_page(kaddr);
-	pr_info("noload_zrun adb_to_bio_cb %px %u %lu %d %lu %lu\n", bio, len, kaddr, offset, start, end);
 
 	WARN_ON(!IS_ALIGNED(offset, 512));
 
 	for (i = 0; i < nr_pages; i++) {
 		unsigned int bytes = PAGE_SIZE - offset;
+
+		pr_info("noload_zrun len_rem %px %u %u", bio, len, bytes);
 
 		if (len <= 0)
 			break;
