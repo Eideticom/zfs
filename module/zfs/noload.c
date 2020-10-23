@@ -132,6 +132,7 @@ static int bio_bounce_pad(struct bio *bio, void *data, unsigned int len,
 		bio->bi_end_io = bio_free_pad_endio;
 	}
 
+	pr_info("noload_zrun pad %px %u %u", bio, len, ALIGN(len, ALGO_ALIGN));
 	bio_add_page(bio, virt_to_page(bounce), ALIGN(len, ALGO_ALIGN), 0);
 
 	return 0;
