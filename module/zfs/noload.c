@@ -31,6 +31,14 @@
 #define MIN_CMP_SIZE (64 * 1024)
 #define ALGO_ALIGN	512
 
+static bool noload_on_fail_dont_compress = true;
+module_param(noload_on_fail_dont_compress, bool, 0644);
+MODULE_PARM_DESC(noload_on_fail_dont_compress,
+		 "when true, don't compress data if the noload fails to "
+		 "compress; when false, use gzip as a fallback when the "
+		 "noload fails which can result in excessive CPU usage in "
+		 "some cases");
+
 struct nvme_algo;
 
 int nvme_algo_run(struct nvme_algo *alg, struct bio *src,
@@ -240,7 +248,7 @@ size_t noload_compress(abd_t *src, void *dst, size_t s_len, size_t d_len,
 		return s_len;
 
 	ret = __noload_run(noload_c_alg, src, dst, s_len, d_len, level);
-	if (ret < 0)
+	if (ret < 0 && noload_on_fail_dont_compress)
 		return s_len;
 
 	return ret;
