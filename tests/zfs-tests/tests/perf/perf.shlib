@@ -24,8 +24,14 @@ export PERF_RUNTIME_WEEKLY=$((30 * 60))
 export PERF_RUNTIME_NIGHTLY=$((10 * 60))
 
 # Default fs creation options
-export PERF_FS_OPTS=${PERF_FS_OPTS:-'-o recsize=8k -o compress=lz4' \
-    ' -o checksum=sha256 -o redundant_metadata=most'}
+if zfs get 2>&1 | grep -q gzip-noload
+then
+	export PERF_FS_OPTS=${PERF_FS_OPTS:-'-o recsize=8k -o compress=gzip-noload' \
+	    ' -o checksum=sha256 -o redundant_metadata=most'}
+else
+	export PERF_FS_OPTS=${PERF_FS_OPTS:-'-o recsize=8k -o compress=lz4' \
+	    ' -o checksum=sha256 -o redundant_metadata=most'}
+fi
 
 function get_sync_str
 {
