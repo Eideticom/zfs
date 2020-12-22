@@ -2531,6 +2531,10 @@ function get_compress_opts
 	if [[ $? -eq 0 ]]; then
 		valid_opts="$valid_opts $GZIP_OPTS"
 	fi
+	zfs get 2>&1 | grep -q gzip-noload
+	if [[ $? -eq 0 ]]; then
+		valid_opts="$valid_opts gzip-noload"
+	fi
 	echo "$valid_opts"
 }
 
