@@ -122,9 +122,9 @@ extern int zio_decompress_data_buf(enum zio_compress c, void *src, void *dst,
     size_t s_len, size_t d_len);
 
 extern size_t noload_compress(abd_t *src, void *dst, size_t s_len,
-			      size_t d_len, int level);
+    size_t d_len, int level);
 extern int noload_decompress(abd_t *src, void *dst, size_t s_len,
-			     size_t d_len, int level);
+    size_t d_len, int level);
 
 #if defined(_KERNEL) && defined(HAVE_NVME_ALGO)
 extern void noload_disable(void);
@@ -134,7 +134,7 @@ extern void noload_release(void);
 static inline void noload_disable(void) {}
 static inline void noload_request(void) {}
 static inline void noload_release(void) {}
-#endif /*_KERNEL && HAVE_NVME_ALGO */
+#endif /* _KERNEL && HAVE_NVME_ALGO */
 
 #ifdef	__cplusplus
 }

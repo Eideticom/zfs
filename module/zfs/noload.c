@@ -28,8 +28,8 @@
 #include <sys/zfs_context.h>
 #include <sys/abd.h>
 
-#define MIN_CMP_SIZE (64 * 1024)
-#define ALGO_ALIGN	512
+#define	MIN_CMP_SIZE (64 * 1024)
+#define	ALGO_ALIGN	512
 
 /* BEGIN CSTYLED */
 static bool noload_on_fail_dont_compress = true;
@@ -122,7 +122,7 @@ static int bio_bounce_pad(struct bio *bio, void *data, unsigned int len,
 		return (-ENOMEM);
 
 	if (is_dst) {
-		bpd = kmalloc(sizeof(*bpd), GFP_KERNEL);
+		bpd = kmalloc(sizeof (*bpd), GFP_KERNEL);
 		if (!bpd) {
 			kfree(bounce);
 			return (-ENOMEM);
@@ -147,7 +147,7 @@ static int bio_bounce_pad(struct bio *bio, void *data, unsigned int len,
 }
 
 static int bio_map_buf(struct bio *bio, void *data, unsigned int len,
-		       bool is_dst)
+    bool is_dst)
 {
 	unsigned long kaddr = (unsigned long)data;
 	unsigned long end = (kaddr + len + PAGE_SIZE - 1) >> PAGE_SHIFT;
@@ -245,7 +245,7 @@ exit_bio_put:
 }
 
 size_t noload_compress(abd_t *src, void *dst, size_t s_len, size_t d_len,
-		       int level)
+    int level)
 {
 	ssize_t ret;
 
@@ -260,7 +260,7 @@ size_t noload_compress(abd_t *src, void *dst, size_t s_len, size_t d_len,
 }
 
 int noload_decompress(abd_t *src, void *dst, size_t s_len, size_t d_len,
-		      int level)
+    int level)
 {
 	ssize_t ret;
 

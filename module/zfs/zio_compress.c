@@ -64,10 +64,10 @@ zio_compress_info_t zio_compress_table[ZIO_COMPRESS_FUNCTIONS] = {
 	{"zle",			64,	zle_compress,	zle_decompress},
 	{"lz4",			0,	lz4_compress_zfs, lz4_decompress_zfs},
 #if defined(_KERNEL) && defined(HAVE_NVME_ALGO)
-	{"gzip-noload",         6,      gzip_compress,  gzip_decompress,
-			noload_compress, noload_decompress},
+	{"gzip-noload",		6,	gzip_compress,	gzip_decompress,
+	    noload_compress, noload_decompress},
 #else
-	{"gzip-noload",         0,      NULL,           NULL, NULL},
+	{"gzip-noload",		0,	NULL,		NULL,	NULL},
 #endif
 };
 
@@ -118,7 +118,7 @@ zio_compress_data(enum zio_compress c, abd_t *src, void *dst, size_t s_len)
 
 	ASSERT((uint_t)c < ZIO_COMPRESS_FUNCTIONS);
 	ASSERT((uint_t)c == ZIO_COMPRESS_EMPTY || ci->ci_compress != NULL ||
-	       ci->ci_compress_abd != NULL);
+	    ci->ci_compress_abd != NULL);
 
 	/*
 	 * If the data is all zeroes, we don't even need to allocate
