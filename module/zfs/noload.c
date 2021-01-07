@@ -69,7 +69,8 @@ static void noload_enable(void)
 	printk(KERN_NOTICE "ZFS: Using Noload Compression\n");
 }
 
-void noload_disable(void)
+void
+noload_disable(void)
 {
 	printk(KERN_NOTICE "ZFS: Noload Compression Disabled\n");
 	nvme_algo_put(noload_c_alg);
@@ -78,13 +79,15 @@ void noload_disable(void)
 	noload_d_alg = NULL;
 }
 
-void noload_request(void)
+void
+noload_request(void)
 {
 	if (atomic_inc_return(&req_count) == 1)
 		noload_enable();
 }
 
-void noload_release(void)
+void
+noload_release(void)
 {
 	if (atomic_dec_and_test(&req_count))
 		noload_disable();
