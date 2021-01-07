@@ -114,7 +114,7 @@ zio_compress_data(enum zio_compress c, abd_t *src, void *dst, size_t s_len)
 	zio_compress_info_t *ci = &zio_compress_table[c];
 
 	if (c == ZIO_COMPRESS_GZIP_NOLOAD && !ci->ci_compress_abd)
-		return s_len;
+		return (s_len);
 
 	ASSERT((uint_t)c < ZIO_COMPRESS_FUNCTIONS);
 	ASSERT((uint_t)c == ZIO_COMPRESS_EMPTY || ci->ci_compress != NULL ||
@@ -185,7 +185,7 @@ zio_decompress_data(enum zio_compress c, abd_t *src, void *dst,
 		ret = ci->ci_decompress_abd(src, dst, s_len, d_len,
 					    ci->ci_level);
 		if (!ret)
-			return ret;
+			return (ret);
 	}
 
 	tmp = abd_borrow_buf_copy(src, s_len);
