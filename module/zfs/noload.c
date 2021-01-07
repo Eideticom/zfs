@@ -31,18 +31,20 @@
 #define MIN_CMP_SIZE (64 * 1024)
 #define ALGO_ALIGN	512
 
+/* BEGIN CSTYLED */
 static bool noload_on_fail_dont_compress = true;
 module_param(noload_on_fail_dont_compress, bool, 0644);
 MODULE_PARM_DESC(noload_on_fail_dont_compress,
-		 "when true, don't compress data if the noload fails to "
-		 "compress; when false, use gzip as a fallback when the "
-		 "noload fails which can result in excessive CPU usage in "
-		 "some cases");
+	"when true, don't compress data if the noload fails to "
+	"compress; when false, use gzip as a fallback when the "
+	"noload fails which can result in excessive CPU usage in "
+	"some cases");
+/* END CSTYLED */
 
 struct nvme_algo;
 
 int nvme_algo_run(struct nvme_algo *alg, struct bio *src,
-		  u64 src_len, struct bio *dst, u64 *dst_len);
+    u64 src_len, struct bio *dst, u64 *dst_len);
 struct nvme_algo *nvme_algo_find(const char *algo_name, const char *dev_name);
 void nvme_algo_put(struct nvme_algo *alg);
 
@@ -106,7 +108,7 @@ static void bio_free_pad_endio(struct bio *bio)
 }
 
 static int bio_bounce_pad(struct bio *bio, void *data, unsigned int len,
-			  bool is_dst)
+    bool is_dst)
 {
 	struct bio_pad_data *bpd;
 	void *bounce;

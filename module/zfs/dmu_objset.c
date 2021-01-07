@@ -198,7 +198,7 @@ compression_changed_cb(void *arg, uint64_t newval)
 	    newval != ZIO_COMPRESS_GZIP_NOLOAD)
 		noload_release();
 	else if (os->os_compress != ZIO_COMPRESS_GZIP_NOLOAD &&
-		 newval == ZIO_COMPRESS_GZIP_NOLOAD)
+	    newval == ZIO_COMPRESS_GZIP_NOLOAD)
 		noload_request();
 
 	os->os_compress = zio_compress_select(os->os_spa, newval,

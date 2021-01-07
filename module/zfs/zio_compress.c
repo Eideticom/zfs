@@ -135,7 +135,7 @@ zio_compress_data(enum zio_compress c, abd_t *src, void *dst, size_t s_len)
 
 	if (ci->ci_compress_abd) {
 		c_len = ci->ci_compress_abd(src, dst, s_len, d_len,
-					    ci->ci_level);
+		    ci->ci_level);
 		if (c_len < 0 && ci->ci_compress) {
 			/*
 			 * Hardware compression failed, fall back to
@@ -183,7 +183,7 @@ zio_decompress_data(enum zio_compress c, abd_t *src, void *dst,
 
 	if (ci->ci_decompress_abd) {
 		ret = ci->ci_decompress_abd(src, dst, s_len, d_len,
-					    ci->ci_level);
+		    ci->ci_level);
 		if (!ret)
 			return (ret);
 	}

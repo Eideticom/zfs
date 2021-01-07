@@ -197,7 +197,7 @@ sub err($) {
 			printf $fmt, $filename, $., $error, $line;
 		} else {
 			printf $fmt, $filename, $., $error;
-		}	
+		}
 		$err_stat = 1;
 	}
 }
@@ -415,7 +415,7 @@ line: while (<$filehandle>) {
 			$prev = $line;
 			next line;
 		} elsif ($picky	&& ! (/^\t/ && $function_header_full_indent != 0)) {
-			
+
 			err("continuation line should be indented by 4 spaces");
 		}
 	}
