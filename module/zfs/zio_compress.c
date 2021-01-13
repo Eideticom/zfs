@@ -64,10 +64,10 @@ zio_compress_info_t zio_compress_table[ZIO_COMPRESS_FUNCTIONS] = {
 	{"zle",			64,	zle_compress,	zle_decompress},
 	{"lz4",			0,	lz4_compress_zfs, lz4_decompress_zfs},
 #if defined(_KERNEL) && defined(HAVE_NVME_ALGO)
-	{"gzip-noload",         6,      gzip_compress,  gzip_decompress,
-			noload_compress, noload_decompress},
+	{"gzip-noload",		6,	gzip_compress,	gzip_decompress,
+	    noload_compress, noload_decompress},
 #else
-	{"gzip-noload",         0,      NULL,           NULL, NULL},
+	{"gzip-noload",		0,	NULL,		NULL,	NULL},
 #endif
 };
 
@@ -114,11 +114,11 @@ zio_compress_data(enum zio_compress c, abd_t *src, void *dst, size_t s_len)
 	zio_compress_info_t *ci = &zio_compress_table[c];
 
 	if (c == ZIO_COMPRESS_GZIP_NOLOAD && !ci->ci_compress_abd)
-		return s_len;
+		return (s_len);
 
 	ASSERT((uint_t)c < ZIO_COMPRESS_FUNCTIONS);
 	ASSERT((uint_t)c == ZIO_COMPRESS_EMPTY || ci->ci_compress != NULL ||
-	       ci->ci_compress_abd != NULL);
+	    ci->ci_compress_abd != NULL);
 
 	/*
 	 * If the data is all zeroes, we don't even need to allocate
@@ -135,7 +135,7 @@ zio_compress_data(enum zio_compress c, abd_t *src, void *dst, size_t s_len)
 
 	if (ci->ci_compress_abd) {
 		c_len = ci->ci_compress_abd(src, dst, s_len, d_len,
-					    ci->ci_level);
+		    ci->ci_level);
 		if (c_len < 0 && ci->ci_compress) {
 			/*
 			 * Hardware compression failed, fall back to
@@ -183,9 +183,9 @@ zio_decompress_data(enum zio_compress c, abd_t *src, void *dst,
 
 	if (ci->ci_decompress_abd) {
 		ret = ci->ci_decompress_abd(src, dst, s_len, d_len,
-					    ci->ci_level);
+		    ci->ci_level);
 		if (!ret)
-			return ret;
+			return (ret);
 	}
 
 	tmp = abd_borrow_buf_copy(src, s_len);

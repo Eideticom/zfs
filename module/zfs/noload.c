@@ -28,21 +28,23 @@
 #include <sys/zfs_context.h>
 #include <sys/abd.h>
 
-#define MIN_CMP_SIZE (64 * 1024)
-#define ALGO_ALIGN	512
+#define	MIN_CMP_SIZE (64 * 1024)
+#define	ALGO_ALIGN	512
 
+/* BEGIN CSTYLED */
 static bool noload_on_fail_dont_compress = true;
 module_param(noload_on_fail_dont_compress, bool, 0644);
 MODULE_PARM_DESC(noload_on_fail_dont_compress,
-		 "when true, don't compress data if the noload fails to "
-		 "compress; when false, use gzip as a fallback when the "
-		 "noload fails which can result in excessive CPU usage in "
-		 "some cases");
+	"when true, don't compress data if the noload fails to "
+	"compress; when false, use gzip as a fallback when the "
+	"noload fails which can result in excessive CPU usage in "
+	"some cases");
+/* END CSTYLED */
 
 struct nvme_algo;
 
 int nvme_algo_run(struct nvme_algo *alg, struct bio *src,
-		  u64 src_len, struct bio *dst, u64 *dst_len);
+    u64 src_len, struct bio *dst, u64 *dst_len);
 struct nvme_algo *nvme_algo_find(const char *algo_name, const char *dev_name);
 void nvme_algo_put(struct nvme_algo *alg);
 
@@ -67,7 +69,8 @@ static void noload_enable(void)
 	printk(KERN_NOTICE "ZFS: Using Noload Compression\n");
 }
 
-void noload_disable(void)
+void
+noload_disable(void)
 {
 	printk(KERN_NOTICE "ZFS: Noload Compression Disabled\n");
 	nvme_algo_put(noload_c_alg);
@@ -76,13 +79,15 @@ void noload_disable(void)
 	noload_d_alg = NULL;
 }
 
-void noload_request(void)
+void
+noload_request(void)
 {
 	if (atomic_inc_return(&req_count) == 1)
 		noload_enable();
 }
 
-void noload_release(void)
+void
+noload_release(void)
 {
 	if (atomic_dec_and_test(&req_count))
 		noload_disable();
@@ -106,7 +111,7 @@ static void bio_free_pad_endio(struct bio *bio)
 }
 
 static int bio_bounce_pad(struct bio *bio, void *data, unsigned int len,
-			  bool is_dst)
+    bool is_dst)
 {
 	struct bio_pad_data *bpd;
 	void *bounce;
@@ -114,13 +119,13 @@ static int bio_bounce_pad(struct bio *bio, void *data, unsigned int len,
 	BUG_ON(bio->bi_private);
 	bounce = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!bounce)
-		return -ENOMEM;
+		return (-ENOMEM);
 
 	if (is_dst) {
-		bpd = kmalloc(sizeof(*bpd), GFP_KERNEL);
+		bpd = kmalloc(sizeof (*bpd), GFP_KERNEL);
 		if (!bpd) {
 			kfree(bounce);
-			return -ENOMEM;
+			return (-ENOMEM);
 		}
 
 		bpd->orig = data;
@@ -138,11 +143,11 @@ static int bio_bounce_pad(struct bio *bio, void *data, unsigned int len,
 
 	bio_add_page(bio, virt_to_page(bounce), ALIGN(len, ALGO_ALIGN), 0);
 
-	return 0;
+	return (0);
 }
 
 static int bio_map_buf(struct bio *bio, void *data, unsigned int len,
-		       bool is_dst)
+    bool is_dst)
 {
 	unsigned long kaddr = (unsigned long)data;
 	unsigned long end = (kaddr + len + PAGE_SIZE - 1) >> PAGE_SHIFT;
@@ -164,7 +169,7 @@ static int bio_map_buf(struct bio *bio, void *data, unsigned int len,
 			break;
 
 		if (bytes > len && !IS_ALIGNED(len, ALGO_ALIGN))
-			return bio_bounce_pad(bio, data, len, is_dst);
+			return (bio_bounce_pad(bio, data, len, is_dst));
 
 		if (!is_vmalloc)
 			page = virt_to_page(data);
@@ -178,14 +183,14 @@ static int bio_map_buf(struct bio *bio, void *data, unsigned int len,
 		offset = 0;
 	}
 
-	return 0;
+	return (0);
 }
 
 static int abd_to_bio_cb(void *buf, size_t size, void *priv)
 {
 	struct bio *bio = priv;
 
-	return bio_map_buf(bio, buf, size, false);
+	return (bio_map_buf(bio, buf, size, false));
 }
 
 static ssize_t __noload_run(struct nvme_algo *alg, abd_t *src, void *dst,
@@ -196,16 +201,16 @@ static ssize_t __noload_run(struct nvme_algo *alg, abd_t *src, void *dst,
 	int ret;
 
 	if (!alg)
-		return -1;
+		return (-1);
 
 	bio_src = bio_kmalloc(GFP_KERNEL, s_len / PAGE_SIZE + 1);
 	if (!src)
-		return -1;
+		return (-1);
 
 	bio_dst = bio_kmalloc(GFP_KERNEL, d_len / PAGE_SIZE + 1);
 	if (!dst) {
 		bio_put(bio_src);
-		return -1;
+		return (-1);
 	}
 
 	bio_src->bi_end_io = bio_put;
@@ -224,10 +229,10 @@ static ssize_t __noload_run(struct nvme_algo *alg, abd_t *src, void *dst,
 		if (ret == -ENODEV)
 			noload_disable();
 
-		return -1;
+		return (-1);
 	}
 
-	return out_len;
+	return (out_len);
 
 exit_src_cleanup:
 	kfree(bio_src->bi_private);
@@ -236,34 +241,34 @@ exit_bio_put:
 	bio_put(bio_src);
 	bio_put(bio_dst);
 
-	return ret;
+	return (ret);
 }
 
 size_t noload_compress(abd_t *src, void *dst, size_t s_len, size_t d_len,
-		       int level)
+    int level)
 {
 	ssize_t ret;
 
 	if (s_len < MIN_CMP_SIZE)
-		return s_len;
+		return (s_len);
 
 	ret = __noload_run(noload_c_alg, src, dst, s_len, d_len, level);
 	if (ret < 0 && noload_on_fail_dont_compress)
-		return s_len;
+		return (s_len);
 
-	return ret;
+	return (ret);
 }
 
 int noload_decompress(abd_t *src, void *dst, size_t s_len, size_t d_len,
-		      int level)
+    int level)
 {
 	ssize_t ret;
 
 	ret = __noload_run(noload_d_alg, src, dst, s_len, d_len, level);
 	if (ret < 0)
-		return -1;
+		return (-1);
 
-	return 0;
+	return (0);
 }
 
 #endif
