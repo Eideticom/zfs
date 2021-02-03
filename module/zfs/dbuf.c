@@ -1026,11 +1026,29 @@ dbuf_verify(dmu_buf_impl_t *db)
 		if (db->db_dirtycnt == 0) {
 			if (db->db_level == 0) {
 				uint64_t *buf = db->db.db_data;
+
+				#ifdef ZOFF
+				const int zeros = zoff_all_zeros(buf);
+				switch (zeros) {
+					case ZOFF_OK:
+						break;
+					case ZOFF_FALLBACK:;
+				#endif
+
 				int i;
 
 				for (i = 0; i < db->db.db_size >> 3; i++) {
 					ASSERT(buf[i] == 0);
 				}
+
+				#ifdef ZOFF
+						break;
+					case ZOFF_ERROR:
+					default:
+						ASSERT(zeros == ZOFF_OK);
+						break;
+				}
+				#endif
 			} else {
 				blkptr_t *bps = db->db.db_data;
 				ASSERT3U(1 << DB_DNODE(db)->dn_indblkshift, ==,

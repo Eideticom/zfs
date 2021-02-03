@@ -28,6 +28,7 @@
 #define	_SYS_ZIO_CHECKSUM_H
 
 #include <sys/zio.h>
+#include <sys/zio_bad_cksum.h>
 #include <zfeature_common.h>
 #include <zfs_fletcher.h>
 
@@ -58,11 +59,6 @@ typedef enum zio_checksum_flags {
 	ZCHECKSUM_FLAG_NOPWRITE = (1 << 5)
 } zio_checksum_flags_t;
 
-typedef enum {
-	ZIO_CHECKSUM_NATIVE,
-	ZIO_CHECKSUM_BYTESWAP
-} zio_byteorder_t;
-
 typedef struct zio_abd_checksum_data {
 	zio_byteorder_t		acd_byteorder;
 	fletcher_4_ctx_t	*acd_ctx;
@@ -91,15 +87,6 @@ typedef const struct zio_checksum_info {
 	zio_checksum_flags_t		ci_flags;
 	char				*ci_name;	/* descriptive name */
 } zio_checksum_info_t;
-
-typedef struct zio_bad_cksum {
-	zio_cksum_t		zbc_expected;
-	zio_cksum_t		zbc_actual;
-	const char		*zbc_checksum_name;
-	uint8_t			zbc_byteswapped;
-	uint8_t			zbc_injected;
-	uint8_t			zbc_has_cksum;	/* expected/actual valid */
-} zio_bad_cksum_t;
 
 extern zio_checksum_info_t zio_checksum_table[ZIO_CHECKSUM_FUNCTIONS];
 

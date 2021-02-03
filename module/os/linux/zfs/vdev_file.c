@@ -39,6 +39,10 @@
 #ifdef _KERNEL
 #include <linux/falloc.h>
 #endif
+
+#ifdef ZOFF
+#include <sys/zoff_shim.h>
+#endif
 /*
  * Virtual device vector for files.
  */
@@ -210,13 +214,20 @@ vdev_file_io_strategy(void *arg)
 	resid = 0;
 
 	if (zio->io_type == ZIO_TYPE_READ) {
-		buf = abd_borrow_buf(zio->io_abd, zio->io_size);
+		buf = abd_borrow_buf(zio->io_abd, size);
 		err = zfs_file_pread(vf->vf_file, buf, size, off, &resid);
 		abd_return_buf_copy(zio->io_abd, buf, size);
 	} else {
-		buf = abd_borrow_buf_copy(zio->io_abd, zio->io_size);
+		#ifdef ZOFF
+		if (zoff_write_file(vf->vf_file, zio->io_abd, size, off, &resid, &err) != ZOFF_OK) {
+			zoff_onload_abd(zio->io_abd, size);
+		#endif
+		buf = abd_borrow_buf_copy(zio->io_abd, size);
 		err = zfs_file_pwrite(vf->vf_file, buf, size, off, &resid);
 		abd_return_buf(zio->io_abd, buf, size);
+		#ifdef ZOFF
+		}
+		#endif
 	}
 	zio->io_error = err;
 	if (resid != 0 && zio->io_error == 0)

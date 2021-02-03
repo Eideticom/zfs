@@ -151,6 +151,10 @@ zfs_file_pwrite(zfs_file_t *fp, const void *buf, size_t count, loff_t off,
 	return (0);
 }
 
+#ifdef ZOFF
+EXPORT_SYMBOL(zfs_file_pwrite);
+#endif
+
 static ssize_t
 zfs_file_read_impl(zfs_file_t *fp, void *buf, size_t count, loff_t *off)
 {

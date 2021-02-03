@@ -41,6 +41,11 @@
 #include <sys/avl.h>
 #include <sys/fs/zfs.h>
 #include <sys/zio_impl.h>
+#include <sys/zio_checksum_enums.h>
+
+#ifdef ZOFF
+#include <sys/zoff_shim.h>
+#endif
 
 #ifdef	__cplusplus
 extern "C" {
@@ -73,26 +78,6 @@ typedef struct zio_gbh {
 	uint64_t		zg_filler[SPA_GBH_FILLER];
 	zio_eck_t		zg_tail;
 } zio_gbh_phys_t;
-
-enum zio_checksum {
-	ZIO_CHECKSUM_INHERIT = 0,
-	ZIO_CHECKSUM_ON,
-	ZIO_CHECKSUM_OFF,
-	ZIO_CHECKSUM_LABEL,
-	ZIO_CHECKSUM_GANG_HEADER,
-	ZIO_CHECKSUM_ZILOG,
-	ZIO_CHECKSUM_FLETCHER_2,
-	ZIO_CHECKSUM_FLETCHER_4,
-	ZIO_CHECKSUM_SHA256,
-	ZIO_CHECKSUM_ZILOG2,
-	ZIO_CHECKSUM_NOPARITY,
-	ZIO_CHECKSUM_SHA512,
-	ZIO_CHECKSUM_SKEIN,
-#if !defined(__FreeBSD__)
-	ZIO_CHECKSUM_EDONR,
-#endif
-	ZIO_CHECKSUM_FUNCTIONS
-};
 
 /*
  * The number of "legacy" compression functions which can be set on individual
@@ -337,6 +322,10 @@ typedef struct zio_prop {
 	uint8_t			zp_iv[ZIO_DATA_IV_LEN];
 	uint8_t			zp_mac[ZIO_DATA_MAC_LEN];
 	uint32_t		zp_zpl_smallblk;
+
+	#ifdef ZOFF
+	zoff_prop_t		zp_zoff;
+	#endif
 } zio_prop_t;
 
 typedef struct zio_cksum_report zio_cksum_report_t;

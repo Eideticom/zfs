@@ -298,6 +298,10 @@ abd_free(abd_t *abd)
 	IMPLY(abd->abd_flags & ABD_FLAG_OWNER, abd->abd_parent == NULL);
 #endif
 
+	#ifdef ZOFF
+	abd_free_zoff(abd);
+	#endif
+
 	if (abd_is_gang(abd)) {
 		abd_free_gang(abd);
 	} else if (abd_is_linear(abd)) {

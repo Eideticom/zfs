@@ -39,6 +39,10 @@
 #include <sys/kstat.h>
 #include <sys/abd.h>
 
+#ifdef ZOFF
+#include <sys/zoff.h>
+#endif
+
 /*
  * ZFS I/O Scheduler
  * ---------------
@@ -842,6 +846,10 @@ vdev_queue_aggregate(vdev_queue_t *vq, zio_t *zio)
 		next_offset = dio->io_offset + dio->io_size;
 	} while (dio != last);
 	ASSERT3U(abd_get_size(aio->io_abd), ==, aio->io_size);
+
+	#ifdef ZOFF
+	zoff_create_gang(aio->io_abd);
+	#endif
 
 	/*
 	 * We need to drop the vdev queue's lock during zio_execute() to

@@ -151,6 +151,10 @@ extern const fletcher_4_ops_t fletcher_4_avx512bw_ops;
 extern const fletcher_4_ops_t fletcher_4_aarch64_neon_ops;
 #endif
 
+#ifdef ZOFF
+void fletcher_4_scalar_native(fletcher_4_ctx_t *ctx, const void *buf, uint64_t size);
+#endif
+
 #ifdef	__cplusplus
 }
 #endif

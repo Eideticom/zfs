@@ -417,7 +417,11 @@ zfs_prop_init(void)
 	    ZFS_TYPE_FILESYSTEM | ZFS_TYPE_VOLUME,
 	    "on | off | lzjb | gzip | gzip-[1-9] | zle | lz4 | "
 	    "zstd | zstd-[1-19] | "
-	    "zstd-fast | zstd-fast-[1-10,20,30,40,50,60,70,80,90,100,500,1000]",
+	    "zstd-fast | zstd-fast-[1-10,20,30,40,50,60,70,80,90,100,500,1000]"
+#ifdef ZOFF
+        " | zoff"
+#endif
+        ,
 	    "COMPRESS", compress_table);
 	zprop_register_index(ZFS_PROP_SNAPDIR, "snapdir", ZFS_SNAPDIR_HIDDEN,
 	    PROP_INHERIT, ZFS_TYPE_FILESYSTEM,
@@ -498,6 +502,27 @@ zfs_prop_init(void)
 	    boolean_table);
 	zprop_register_index(ZFS_PROP_OVERLAY, "overlay", 1, PROP_INHERIT,
 	    ZFS_TYPE_FILESYSTEM, "on | off", "OVERLAY", boolean_table);
+
+#ifdef ZOFF
+	zprop_register_index(ZFS_PROP_ZOFF_CHECKSUM, "zoff_checksum",     1, PROP_INHERIT,
+	    ZFS_TYPE_FILESYSTEM, "on | off", "zoff_checksum", boolean_table);
+	zprop_register_index(ZFS_PROP_ZOFF_COMPRESS, "zoff_compress",     1, PROP_INHERIT,
+	    ZFS_TYPE_FILESYSTEM, "on | off", "zoff_compress", boolean_table);
+	zprop_register_index(ZFS_PROP_ZOFF_DECOMPRESS, "zoff_decompress", 1, PROP_INHERIT,
+	    ZFS_TYPE_FILESYSTEM, "on | off", "zoff_decompress", boolean_table);
+	zprop_register_index(ZFS_PROP_ZOFF_RAIDZ1_GEN, "zoff_raidz1_gen", 1, PROP_INHERIT,
+	    ZFS_TYPE_FILESYSTEM, "on | off", "zoff_raidz1_gen", boolean_table);
+	zprop_register_index(ZFS_PROP_ZOFF_RAIDZ2_GEN, "zoff_raidz2_gen", 1, PROP_INHERIT,
+	    ZFS_TYPE_FILESYSTEM, "on | off", "zoff_raidz2_gen", boolean_table);
+	zprop_register_index(ZFS_PROP_ZOFF_RAIDZ3_GEN, "zoff_raidz3_gen", 1, PROP_INHERIT,
+	    ZFS_TYPE_FILESYSTEM, "on | off", "zoff_raidz3_gen", boolean_table);
+	zprop_register_index(ZFS_PROP_ZOFF_RAIDZ1_REC, "zoff_raidz1_rec", 1, PROP_INHERIT,
+	    ZFS_TYPE_FILESYSTEM, "on | off", "zoff_raidz1_rec", boolean_table);
+	zprop_register_index(ZFS_PROP_ZOFF_RAIDZ2_REC, "zoff_raidz2_rec", 1, PROP_INHERIT,
+	    ZFS_TYPE_FILESYSTEM, "on | off", "zoff_raidz2_rec", boolean_table);
+	zprop_register_index(ZFS_PROP_ZOFF_RAIDZ3_REC, "zoff_raidz3_rec", 1, PROP_INHERIT,
+	    ZFS_TYPE_FILESYSTEM, "on | off", "zoff_raidz3_rec", boolean_table);
+#endif
 
 	/* default index properties */
 	zprop_register_index(ZFS_PROP_VERSION, "version", 0, PROP_DEFAULT,

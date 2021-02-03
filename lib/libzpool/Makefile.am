@@ -176,7 +176,9 @@ KERNEL_C = \
 	zio_inject.c \
 	zle.c \
 	zrlock.c \
-	zthr.c
+	zthr.c \
+	zoff.c \
+	zoff_hash.c
 
 LUA_C = \
 	lapi.c \

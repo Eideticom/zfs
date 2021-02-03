@@ -40,6 +40,10 @@
 #include <sys/sa.h>
 #include <sys/zfs_ioctl.h>
 
+#ifdef ZOFF
+#include <sys/zoff_shim.h>
+#endif
+
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -128,6 +132,11 @@ struct objset {
 	zfs_sync_type_t os_sync;
 	zfs_redundant_metadata_type_t os_redundant_metadata;
 	uint64_t os_recordsize;
+
+	#ifdef ZOFF
+	zoff_prop_t os_zoff;
+	#endif
+
 	/*
 	 * The next four values are used as a cache of whatever's on disk, and
 	 * are initialized the first time these properties are queried. Before

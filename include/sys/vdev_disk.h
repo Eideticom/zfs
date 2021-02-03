@@ -42,5 +42,9 @@
 
 #ifdef _KERNEL
 #include <sys/vdev.h>
+
+#ifdef ZOFF
+void vdev_disk_error(zio_t *zio);
+#endif /* ZOFF */
 #endif /* _KERNEL */
 #endif /* _SYS_VDEV_DISK_H */

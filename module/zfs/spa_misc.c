@@ -64,6 +64,10 @@
 #include <sys/qat.h>
 #include <sys/zstd/zstd.h>
 
+#ifdef ZOFF
+#include <sys/zoff_shim.h>
+#endif
+
 /*
  * SPA locking
  *
@@ -2408,6 +2412,9 @@ spa_init(spa_mode_t mode)
 	}
 #endif
 
+#ifdef ZOFF
+	zoff_init();
+#endif
 	fm_init();
 	zfs_refcount_init();
 	unique_init();
@@ -2454,6 +2461,9 @@ spa_fini(void)
 	scan_fini();
 	qat_fini();
 	spa_import_progress_destroy();
+#ifdef ZOFF
+	zoff_fini();
+#endif
 
 	avl_destroy(&spa_namespace_avl);
 	avl_destroy(&spa_spare_avl);

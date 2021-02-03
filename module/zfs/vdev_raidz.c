@@ -41,6 +41,10 @@
 #include <sys/vdev.h>	/* For vdev_xlate() in vdev_raidz_io_verify() */
 #endif
 
+#ifdef ZOFF
+#include <sys/zoff_shim.h>
+#endif
+
 /*
  * Virtual device vector for RAID-Z.
  *
@@ -108,36 +112,13 @@
  * or in concert to recover missing data columns.
  */
 
-#define	VDEV_RAIDZ_P		0
-#define	VDEV_RAIDZ_Q		1
-#define	VDEV_RAIDZ_R		2
-
-#define	VDEV_RAIDZ_MUL_2(x)	(((x) << 1) ^ (((x) & 0x80) ? 0x1d : 0))
-#define	VDEV_RAIDZ_MUL_4(x)	(VDEV_RAIDZ_MUL_2(VDEV_RAIDZ_MUL_2(x)))
-
-/*
- * We provide a mechanism to perform the field multiplication operation on a
- * 64-bit value all at once rather than a byte at a time. This works by
- * creating a mask from the top bit in each byte and using that to
- * conditionally apply the XOR of 0x1d.
- */
-#define	VDEV_RAIDZ_64MUL_2(x, mask) \
-{ \
-	(mask) = (x) & 0x8080808080808080ULL; \
-	(mask) = ((mask) << 1) - ((mask) >> 7); \
-	(x) = (((x) << 1) & 0xfefefefefefefefeULL) ^ \
-	    ((mask) & 0x1d1d1d1d1d1d1d1dULL); \
-}
-
-#define	VDEV_RAIDZ_64MUL_4(x, mask) \
-{ \
-	VDEV_RAIDZ_64MUL_2((x), mask); \
-	VDEV_RAIDZ_64MUL_2((x), mask); \
-}
-
 static void
 vdev_raidz_row_free(raidz_row_t *rr)
 {
+	#ifdef ZOFF
+	zoff_free_raidz(rr);
+	#endif
+
 	for (int c = 0; c < rr->rr_cols; c++) {
 		raidz_col_t *rc = &rr->rr_col[c];
 
@@ -335,6 +316,20 @@ vdev_raidz_map_alloc(zio_t *zio, uint64_t ashift, uint64_t dcols,
 
 	/* init RAIDZ parity ops */
 	rm->rm_ops = vdev_raidz_math_get_ops();
+
+	#ifdef ZOFF
+	if ((zio->io_prop.zp_zoff.raidz1_gen == 1) ||
+	    (zio->io_prop.zp_zoff.raidz2_gen == 1) ||
+	    (zio->io_prop.zp_zoff.raidz3_gen == 1)) {
+		zoff_offload_abd(zio->io_abd, zio->io_size);
+
+		zoff_lock_raidz();
+		if (zoff_alloc_raidz(zio, rr) != ZOFF_OK) {
+			zoff_cleanup_raidz(zio, rr);
+		}
+		zoff_unlock_raidz();
+	}
+	#endif
 
 	return (rm);
 }
@@ -1527,9 +1522,19 @@ vdev_raidz_io_start_write(zio_t *zio, raidz_row_t *rr, uint64_t ashift)
 	raidz_map_t *rm = zio->io_vsd;
 	int c, i;
 
+	/* here instead of vdev_raidz_generate_parity_row to be able to use zio */
+	#ifdef ZOFF
+	zoff_lock_raidz();
+	if (zoff_raidz_gen(zio, rr) != ZOFF_OK) {
+		zoff_cleanup_raidz(zio, rr);
+	#endif
 	vdev_raidz_generate_parity_row(rm, rr);
+	#ifdef ZOFF
+	}
+	zoff_unlock_raidz();
+	#endif
 
-	for (int c = 0; c < rr->rr_cols; c++) {
+	for (c = 0; c < rr->rr_cols; c++) {
 		raidz_col_t *rc = &rr->rr_col[c];
 		if (rc->rc_size == 0)
 			continue;

@@ -31,31 +31,11 @@
 #define	_SYS_ZIO_COMPRESS_H
 
 #include <sys/abd.h>
+#include <sys/zio_compress_enums.h>
 
 #ifdef	__cplusplus
 extern "C" {
 #endif
-
-enum zio_compress {
-	ZIO_COMPRESS_INHERIT = 0,
-	ZIO_COMPRESS_ON,
-	ZIO_COMPRESS_OFF,
-	ZIO_COMPRESS_LZJB,
-	ZIO_COMPRESS_EMPTY,
-	ZIO_COMPRESS_GZIP_1,
-	ZIO_COMPRESS_GZIP_2,
-	ZIO_COMPRESS_GZIP_3,
-	ZIO_COMPRESS_GZIP_4,
-	ZIO_COMPRESS_GZIP_5,
-	ZIO_COMPRESS_GZIP_6,
-	ZIO_COMPRESS_GZIP_7,
-	ZIO_COMPRESS_GZIP_8,
-	ZIO_COMPRESS_GZIP_9,
-	ZIO_COMPRESS_ZLE,
-	ZIO_COMPRESS_LZ4,
-	ZIO_COMPRESS_ZSTD,
-	ZIO_COMPRESS_FUNCTIONS
-};
 
 /* Compression algorithms that have levels */
 #define	ZIO_COMPRESS_HASLEVEL(compress)	((compress == ZIO_COMPRESS_ZSTD || \

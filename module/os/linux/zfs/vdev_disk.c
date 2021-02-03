@@ -38,6 +38,11 @@
 #include <linux/msdos_fs.h>
 #include <linux/vfs_compat.h>
 
+#ifdef ZOFF
+#include <sys/abd_impl.h>
+#include <sys/zoff_shim.h>
+#endif
+
 typedef struct vdev_disk {
 	struct block_device		*vd_bdev;
 	krwlock_t			vd_lock;
@@ -151,7 +156,11 @@ bdev_max_capacity(struct block_device *bdev, uint64_t wholedisk)
 	return (psize);
 }
 
+#ifndef ZOFF
 static void
+#else
+void
+#endif
 vdev_disk_error(zio_t *zio)
 {
 	/*
@@ -549,6 +558,28 @@ __vdev_disk_physio(struct block_device *bdev, zio_t *zio,
 		    io_offset, io_size, i_size_read(bdev->bd_inode));
 		return (SET_ERROR(EIO));
 	}
+
+	#ifdef ZOFF
+	if (rw == WRITE) {
+		if (zoff_write_disk(bdev, zio, io_size, io_offset, rw,
+		    (zio && !(zio->io_flags & (ZIO_FLAG_IO_RETRY | ZIO_FLAG_TRYHARD))),
+		    flags) == ZOFF_OK) {
+			return 0;
+		}
+
+		if (abd_is_gang(zio->io_abd)) {
+			for (abd_t *cabd = list_head(&ABD_GANG(zio->io_abd).abd_gang_chain);
+			    cabd != NULL;
+			    cabd = list_next(&ABD_GANG(zio->io_abd).abd_gang_chain, cabd)) {
+				zoff_onload_abd(cabd, cabd->abd_size);
+			}
+			zoff_free(zio->io_abd);
+		}
+		else if (abd_is_linear(zio->io_abd)) {
+			zoff_onload_abd(zio->io_abd, io_size);
+		}
+	}
+	#endif
 
 retry:
 	dr = vdev_disk_dio_alloc(bio_count);

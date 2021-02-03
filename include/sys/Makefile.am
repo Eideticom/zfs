@@ -89,6 +89,7 @@ COMMON_H = \
 	vdev_initialize.h \
 	vdev_raidz.h \
 	vdev_raidz_impl.h \
+	vdev_raidz_enums.h \
 	vdev_rebuild.h \
 	vdev_removal.h \
 	vdev_trim.h \
@@ -123,14 +124,19 @@ COMMON_H = \
 	zfs_znode.h \
 	zil.h \
 	zil_impl.h \
+	zio_bad_cksum.h \
 	zio_checksum.h \
+	zio_checksum_enums.h \
 	zio_compress.h \
+	zio_compress_enums.h \
 	zio_crypt.h \
 	zio.h \
 	zio_impl.h \
 	zio_priority.h \
 	zrlock.h \
-	zthr.h
+	zthr.h \
+	zoff.h \
+	zoff_shim.h
 
 KERNEL_H = \
 	zfs_ioctl.h \

@@ -230,6 +230,10 @@ dedup_changed_cb(void *arg, uint64_t newval)
 
 	os->os_dedup_checksum = checksum & ZIO_CHECKSUM_MASK;
 	os->os_dedup_verify = !!(checksum & ZIO_CHECKSUM_VERIFY);
+
+	if (os->os_dedup_verify == B_TRUE) {
+		zoff_off(os, "dedup verify");
+	}
 }
 
 static void
@@ -331,6 +335,125 @@ smallblk_changed_cb(void *arg, uint64_t newval)
 
 	os->os_zpl_special_smallblock = newval;
 }
+
+#ifdef ZOFF
+static void
+zoff_checksum_changed_cb(void *arg, uint64_t newval)
+{
+	objset_t *os = arg;
+
+	/*
+	 * Inheritance and range checking should have been done by now.
+	 */
+	if ((os->os_zoff.checksum = newval)) {
+		zoff_on(os, "checksum");
+	}
+}
+
+static void
+zoff_compression_changed_cb(void *arg, uint64_t newval)
+{
+	objset_t *os = arg;
+
+	/*
+	 * Inheritance and range checking should have been done by now.
+	 */
+	if ((os->os_zoff.compress = newval)) {
+		zoff_on(os, "compression");
+	}
+}
+
+static void
+zoff_decompression_changed_cb(void *arg, uint64_t newval)
+{
+	objset_t *os = arg;
+
+	/*
+	 * Inheritance and range checking should have been done by now.
+	 */
+	if ((os->os_zoff.decompress = newval)) {
+		zoff_on(os, "decompression");
+	}
+}
+
+static void
+zoff_raidz1_gen_changed_cb(void *arg, uint64_t newval)
+{
+	objset_t *os = arg;
+
+	/*
+	 * Inheritance and range checking should have been done by now.
+	 */
+	if ((os->os_zoff.raidz1_gen = newval)) {
+		zoff_on(os, "raidz1 gen");
+	}
+}
+
+static void
+zoff_raidz2_gen_changed_cb(void *arg, uint64_t newval)
+{
+	objset_t *os = arg;
+
+	/*
+	 * Inheritance and range checking should have been done by now.
+	 */
+	if ((os->os_zoff.raidz2_gen = newval)) {
+		zoff_on(os, "raidz2 gen");
+	}
+}
+
+static void
+zoff_raidz3_gen_changed_cb(void *arg, uint64_t newval)
+{
+	objset_t *os = arg;
+
+	/*
+	 * Inheritance and range checking should have been done by now.
+	 */
+	if ((os->os_zoff.raidz3_gen = newval)) {
+		zoff_on(os, "raidz3 gen");
+	}
+}
+
+static void
+zoff_raidz1_rec_changed_cb(void *arg, uint64_t newval)
+{
+	objset_t *os = arg;
+
+	/*
+	 * Inheritance and range checking should have been done by now.
+	 */
+	if ((os->os_zoff.raidz1_rec = newval)) {
+		zoff_on(os, "raidz1 rec");
+	}
+}
+
+static void
+zoff_raidz2_rec_changed_cb(void *arg, uint64_t newval)
+{
+	objset_t *os = arg;
+
+	/*
+	 * Inheritance and range checking should have been done by now.
+	 */
+	if ((os->os_zoff.raidz2_rec = newval)) {
+		zoff_on(os, "raidz2 rec");
+	}
+}
+
+static void
+zoff_raidz3_rec_changed_cb(void *arg, uint64_t newval)
+{
+	objset_t *os = arg;
+
+	/*
+	 * Inheritance and range checking should have been done by now.
+	 */
+	if ((os->os_zoff.raidz3_rec = newval)) {
+		zoff_on(os, "raidz3 rec");
+	}
+}
+#endif
 
 static void
 logbias_changed_cb(void *arg, uint64_t newval)
@@ -574,6 +697,53 @@ dmu_objset_open_impl(spa_t *spa, dsl_dataset_t *ds, blkptr_t *bp,
 				    ZFS_PROP_SPECIAL_SMALL_BLOCKS),
 				    smallblk_changed_cb, os);
 			}
+			#ifdef ZOFF
+			if (err == 0) {
+				err = dsl_prop_register(ds,
+				    zfs_prop_to_name(ZFS_PROP_ZOFF_CHECKSUM),
+				    zoff_checksum_changed_cb, os);
+			}
+			if (err == 0) {
+				err = dsl_prop_register(ds,
+				    zfs_prop_to_name(ZFS_PROP_ZOFF_COMPRESS),
+				    zoff_compression_changed_cb, os);
+			}
+			if (err == 0) {
+				err = dsl_prop_register(ds,
+				    zfs_prop_to_name(ZFS_PROP_ZOFF_DECOMPRESS),
+				    zoff_decompression_changed_cb, os);
+			}
+			if (err == 0) {
+				err = dsl_prop_register(ds,
+				    zfs_prop_to_name(ZFS_PROP_ZOFF_RAIDZ1_GEN),
+				    zoff_raidz1_gen_changed_cb, os);
+			}
+			if (err == 0) {
+				err = dsl_prop_register(ds,
+				    zfs_prop_to_name(ZFS_PROP_ZOFF_RAIDZ2_GEN),
+				    zoff_raidz2_gen_changed_cb, os);
+			}
+			if (err == 0) {
+				err = dsl_prop_register(ds,
+				    zfs_prop_to_name(ZFS_PROP_ZOFF_RAIDZ3_GEN),
+				    zoff_raidz3_gen_changed_cb, os);
+			}
+			if (err == 0) {
+				err = dsl_prop_register(ds,
+				    zfs_prop_to_name(ZFS_PROP_ZOFF_RAIDZ1_REC),
+				    zoff_raidz1_rec_changed_cb, os);
+			}
+			if (err == 0) {
+				err = dsl_prop_register(ds,
+				    zfs_prop_to_name(ZFS_PROP_ZOFF_RAIDZ2_REC),
+				    zoff_raidz2_rec_changed_cb, os);
+			}
+			if (err == 0) {
+				err = dsl_prop_register(ds,
+				    zfs_prop_to_name(ZFS_PROP_ZOFF_RAIDZ3_REC),
+				    zoff_raidz3_rec_changed_cb, os);
+			}
+			#endif
 		}
 		if (err != 0) {
 			arc_buf_destroy(os->os_phys_buf, &os->os_phys_buf);
@@ -594,6 +764,7 @@ dmu_objset_open_impl(spa_t *spa, dsl_dataset_t *ds, blkptr_t *bp,
 		os->os_primary_cache = ZFS_CACHE_ALL;
 		os->os_secondary_cache = ZFS_CACHE_ALL;
 		os->os_dnodesize = DNODE_MIN_SIZE;
+		memset(&os->os_zoff, 0, sizeof(os->os_zoff));
 	}
 
 	if (ds == NULL || !ds->ds_is_snapshot)
