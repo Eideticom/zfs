@@ -23,7 +23,7 @@ static const size_t BP_SIZE = ZFS_CHECKSUM_SIZE;
 /***********************************************************************/
 /* initialized by zfs */
 
-/* hash table mapping kernel pointers to ZOFF handles */
+/* hash table mapping memory pointers to offloader handles */
 /* lifetime is same as zfs */
 static zhc_t ZOFF_HANDLES;
 
@@ -50,8 +50,8 @@ boolean_t zoff_provider_sane(const zoff_functions_t *provider) {
 		provider                 &&
 		provider->alloc          &&
 		provider->free           &&
-		provider->copy_from_kern &&
-		provider->copy_to_kern   &&
+		provider->copy_from_mem  &&
+		provider->copy_to_mem    &&
 		provider->copy_internal  &&
 		provider->zero_fill      &&
 		provider->all_zeros      &&
@@ -241,7 +241,7 @@ int zoff_offload(void *key, void *buf, size_t size) {
 	}
 
 	zmv_t mv = { .handle = zhe->handle, .offset = 0 };
-	if (zoff_provider->copy_from_kern(&mv, buf, size) != ZOFF_OK) {
+	if (zoff_provider->copy_from_mem(&mv, buf, size) != ZOFF_OK) {
 		zoff_hash_context_write_unlock(&ZOFF_HANDLES);
 		destroy_zhe(zhe);
 		return ZOFF_ERROR;
@@ -271,7 +271,7 @@ int zoff_onload(void *key, void *buf, size_t size) {
 	}
 
 	zmv_t mv = { .handle = zhe->handle, .offset = 0 };
-	const int rc = zoff_provider->copy_to_kern(&mv, buf, size);
+	const int rc = zoff_provider->copy_to_mem(&mv, buf, size);
 
 	zoff_hash_context_write_unlock(&ZOFF_HANDLES);
 
@@ -299,7 +299,7 @@ int zoff_offload_cb(void *buf, size_t size, void *private) {
 		return ZOFF_ERROR;
 	}
 
-	if (zoff_provider->copy_from_kern(private, buf, size) != ZOFF_OK) {
+	if (zoff_provider->copy_from_mem(private, buf, size) != ZOFF_OK) {
 		return ZOFF_ERROR;
 	}
 
@@ -315,7 +315,7 @@ int zoff_onload_cb(void *buf, size_t size, void *private) {
 		return ZOFF_ERROR;
 	}
 
-	if (zoff_provider->copy_to_kern(private, buf, size) != ZOFF_OK) {
+	if (zoff_provider->copy_to_mem(private, buf, size) != ZOFF_OK) {
 		return ZOFF_ERROR;
 	}
 
@@ -774,7 +774,7 @@ int zoff_checksum_error(zoff_prop_t *zoff, enum zio_checksum alg, zio_byteorder_
 	if (info != NULL) {
 		{
 			zmv_t mv = { .handle = zbc_expected_zhe, .offset = 0 };
-			zoff_provider->copy_to_kern(&mv, info->zbc_expected.zc_word,
+			zoff_provider->copy_to_mem(&mv, info->zbc_expected.zc_word,
 			    sizeof(info->zbc_expected.zc_word));
 			zoff_provider->free(zbc_expected_zhe);
 
@@ -782,14 +782,14 @@ int zoff_checksum_error(zoff_prop_t *zoff, enum zio_checksum alg, zio_byteorder_
 
 		{
 			zmv_t mv = { .handle = zbc_actual_zhe, .offset = 0 };
-			zoff_provider->copy_to_kern(&mv, info->zbc_actual.zc_word,
+			zoff_provider->copy_to_mem(&mv, info->zbc_actual.zc_word,
 			    sizeof(info->zbc_actual.zc_word));
 			zoff_provider->free(zbc_actual_zhe);
 		}
 
 		{
 			zmv_t mv = { .handle = zbc_checksum_name_zhe, .offset = 0 };
-			zoff_provider->copy_to_kern(&mv, (void *) info->zbc_checksum_name, ZOFF_NAME_LEN);
+			zoff_provider->copy_to_mem(&mv, (void *) info->zbc_checksum_name, ZOFF_NAME_LEN);
 			zoff_provider->free(zbc_checksum_name_zhe);
 		}
 

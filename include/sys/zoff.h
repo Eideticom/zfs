@@ -45,8 +45,8 @@ typedef struct zoff_functions {
 	    size_t size, size_t offset);                           /* get a reference to an existing offloader handle */
 	void (*free)(void *handle);                                /* free an offloader handle */
 
-	int (*copy_from_kern)(zmv_t *mv, void *buf, size_t size);  /* kernel buf -> offloader  */
-	int (*copy_to_kern)(zmv_t *mv, void *buf, size_t size);    /* offloader  -> kernel buf */
+	int (*copy_from_mem)(zmv_t *mv, void *buf, size_t size);   /* memory buf -> offloader  */
+	int (*copy_to_mem)(zmv_t *mv, void *buf, size_t size);     /* offloader  -> memory buf */
 	int (*copy_internal)(zmv_t *dst, zmv_t *src, size_t size); /* offloader  -> offloader  */
 
 	int (*zero_fill)(void *handle, size_t offset, size_t size);

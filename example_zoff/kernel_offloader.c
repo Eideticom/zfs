@@ -115,7 +115,7 @@ void kernel_offloader_free(void *handle) {
 	kernel_offloader_free_local(unswizzle(handle));
 }
 
-void *kernel_offloader_copy_from_kern(void *handle, size_t offset, void *src, size_t size) {
+void *kernel_offloader_copy_from_mem(void *handle, size_t offset, void *src, size_t size) {
 	koh_t *koh = unswizzle(handle);
 	if (!koh) {
 		return NULL;
@@ -132,7 +132,7 @@ void *kernel_offloader_copy_from_kern(void *handle, size_t offset, void *src, si
 	return memcpy(ptr_start(koh, offset), src, size);
 }
 
-void *kernel_offloader_copy_to_kern(void *handle, size_t offset, void *dst, size_t size) {
+void *kernel_offloader_copy_to_mem(void *handle, size_t offset, void *dst, size_t size) {
 	koh_t *koh = unswizzle(handle);
 	if (!koh) {
 		return NULL;

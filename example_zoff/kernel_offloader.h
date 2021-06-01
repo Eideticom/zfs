@@ -40,8 +40,8 @@ int kernel_offloader_handle_print(void *handle, char *buf, size_t size);
 void *kernel_offloader_alloc(size_t size);
 void *kernel_offloader_alloc_ref(void *src, size_t size, size_t offset);
 void  kernel_offloader_free(void *handle);
-void *kernel_offloader_copy_from_kern(void *handle, size_t offset, void *src, size_t size);
-void *kernel_offloader_copy_to_kern(void *handle, size_t offset, void *dst, size_t size);
+void *kernel_offloader_copy_from_mem(void *handle, size_t offset, void *src, size_t size);
+void *kernel_offloader_copy_to_mem(void *handle, size_t offset, void *dst, size_t size);
 int kernel_offloader_copy_internal(void *dst_handle, size_t dst_offset,
     void *src_handle, size_t src_offset,
     size_t size);

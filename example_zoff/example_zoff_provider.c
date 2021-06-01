@@ -39,12 +39,12 @@ static int translate_rc(const int offloader_rc) {
 	return zoff_rc;
 }
 
-static int example_copy_from_kern(zmv_t *mv, void *buf, size_t size) {
-	return kernel_offloader_copy_from_kern(mv->handle, mv->offset, buf, size)?ZOFF_OK:ZOFF_ERROR;
+static int example_copy_from_mem(zmv_t *mv, void *buf, size_t size) {
+	return kernel_offloader_copy_from_mem(mv->handle, mv->offset, buf, size)?ZOFF_OK:ZOFF_ERROR;
 }
 
-static int example_copy_to_kern(zmv_t *mv, void *buf, size_t size) {
-	return kernel_offloader_copy_to_kern(mv->handle, mv->offset, buf, size)?ZOFF_OK:ZOFF_ERROR;
+static int example_copy_to_mem(zmv_t *mv, void *buf, size_t size) {
+	return kernel_offloader_copy_to_mem(mv->handle, mv->offset, buf, size)?ZOFF_OK:ZOFF_ERROR;
 }
 
 static int example_copy_internal(zmv_t *dst, zmv_t *src, size_t size) {
@@ -103,7 +103,7 @@ static int example_compress(enum zio_compress alg,
 	if (kz_rc == KERNEL_OFFLOADER_OK) {
 		/* provider doesn't have direct access to the offloader's data */
 		kocr_t kz_ret;
-		kernel_offloader_copy_to_kern(kz_ret_handle, 0, &kz_ret, sizeof(kz_ret));
+		kernel_offloader_copy_to_mem(kz_ret_handle, 0, &kz_ret, sizeof(kz_ret));
 
 		/* translate offloader extra return values to zoff return values */
 		zoff_ret->c_len = kz_ret.c_len;
@@ -152,43 +152,43 @@ int example_write_disk(struct block_device *bdev, void *handle,
 
 static const char name[] = "example_zoff";
 static const zoff_functions_t example_zoff_functions = {
-	.alloc                = kernel_offloader_alloc,
-	.alloc_ref            = kernel_offloader_alloc_ref,
-	.free                 = kernel_offloader_free,
-	.copy_from_kern       = example_copy_from_kern,
-	.copy_to_kern         = example_copy_to_kern,
-	.copy_internal        = example_copy_internal,
-	.zero_fill            = example_zero_fill,
-	.all_zeros            = example_all_zeros,
-	.gang                 = {
-	                          .alloc = kernel_offloader_alloc_gang,
-	                          .add = example_gang_add,
-	                        },
-	.checksum             = {
-	                          .compute = example_checksum_compute,
-	                          .error   = example_checksum_error,
-	                        },
-	.compress             = example_compress,
-	.decompress           = example_decompress,
-	.raid                 = {
-	                          .alloc     = kernel_offloader_alloc_raidz,
-	                          .set_col   = example_raidz_set_col,
-	                          .free      = kernel_offloader_free_raidz,
-	                          .gen       = {
-	                                         .z1 = example_raidz1_gen,
-	                                         .z2 = example_raidz2_gen,
-	                                         .z3 = example_raidz3_gen,
-	                                       },
-	                          .rec       = {
-	                                         .z1 = NULL,
-	                                         .z2 = NULL,
-	                                         .z3 = NULL,
-	                                       },
-	                        },
-	.write                = {
-	                          .file = example_write_file,
-	                          .disk = example_write_disk,
-	                        },
+	.alloc          = kernel_offloader_alloc,
+	.alloc_ref      = kernel_offloader_alloc_ref,
+	.free           = kernel_offloader_free,
+	.copy_from_mem  = example_copy_from_mem,
+	.copy_to_mem    = example_copy_to_mem,
+	.copy_internal  = example_copy_internal,
+	.zero_fill      = example_zero_fill,
+	.all_zeros      = example_all_zeros,
+	.gang           = {
+	                    .alloc = kernel_offloader_alloc_gang,
+	                    .add   = example_gang_add,
+	                  },
+	.checksum       = {
+	                    .compute = example_checksum_compute,
+	                    .error   = example_checksum_error,
+	                  },
+	.compress       = example_compress,
+	.decompress     = example_decompress,
+	.raid           = {
+	                    .alloc     = kernel_offloader_alloc_raidz,
+	                    .set_col   = example_raidz_set_col,
+	                    .free      = kernel_offloader_free_raidz,
+	                    .gen       = {
+	                                   .z1 = example_raidz1_gen,
+	                                   .z2 = example_raidz2_gen,
+	                                   .z3 = example_raidz3_gen,
+	                                 },
+	                    .rec       = {
+	                                   .z1 = NULL,
+	                                   .z2 = NULL,
+	                                   .z3 = NULL,
+	                                 },
+	                  },
+	.write          = {
+	                    .file = example_write_file,
+	                    .disk = example_write_disk,
+	                  },
 };
 
 static int __init example_zoff_init(void) {
