@@ -2,7 +2,6 @@
 #define _KERNEL_OFFLOADER_H
 
 #include <linux/blk_types.h>
-#include <linux/fs.h>
 #include <sys/zfs_file.h>     /* zfs_file_t and exporting zfs_file_pwrite */
 #include <sys/zio_checksum_enums.h>
 #include <sys/zio_compress_enums.h>

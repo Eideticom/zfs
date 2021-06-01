@@ -3,10 +3,12 @@
 
 /* copied from module/os/linux/zfs/vdev_disk.c */
 
-#include <sys/debug.h>
+/* these three have macros that are used by blkdev_compat.h and needs to come first */
+#include <sys/debug.h>     /* ASSERT */
 #include <sys/types.h>
-#include <zfs_config.h> /* this has macros that are used by blkdev_compat.h and needs to come first */
+#include <zfs_config.h>
 #include <linux/blkdev_compat.h>
+
 #include "private.h"
 
 int

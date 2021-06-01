@@ -13,14 +13,9 @@
   memory, but can call the functions the offloader API exposes.
 */
 
-#include <linux/fs.h>
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
-#include <linux/random.h>
-
-/* ZFS headers */
-#include <sys/zfs_file.h>     /* zfs_file_t and exporting zfs_file_pwrite */
 
 /* normal ZOFF includes */
 #include <kernel_offloader.h> /* provides access to the actual offloader */
@@ -141,19 +136,18 @@ int example_raidz3_gen(void *handle) {
 	return translate_rc(kernel_offloader_raidz3_gen(handle));
 }
 
-int example_write_file(zfs_file_t *fp, void *handle, size_t count, loff_t offset,
-    ssize_t *resid, int *err) {
-	return translate_rc(kernel_offloader_write_file(fp, handle, count, offset, resid, err));
+int example_write_file(zfs_file_t *fp, void *handle, size_t count,
+    loff_t offset, ssize_t *resid, int *err) {
+	return translate_rc(kernel_offloader_write_file(fp, handle, count,
+	    offset, resid, err));
 }
 
 int example_write_disk(struct block_device *bdev, void *handle,
     size_t io_size, uint64_t io_offset, int rw,
-    int failfast, int flags,
-    void *zio) {
+    int failfast, int flags, void *zio) {
 	return translate_rc(kernel_offloader_write_disk(bdev, handle,
 	    io_size, io_offset, rw,
-        failfast, flags,
-        zio));
+	    failfast, flags, zio));
 }
 
 static const char name[] = "example_zoff";

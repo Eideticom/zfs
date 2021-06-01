@@ -11,17 +11,37 @@
 struct block_device;
 #endif
 
+#include <sys/abd.h>
 #include <sys/types.h>
+#include <sys/zfs_file.h>
+#include <sys/zio.h>
+#include <sys/zio_bad_cksum.h>
 #include <sys/zio_checksum_enums.h>
 #include <sys/zio_compress_enums.h>
 #include <sys/zoff_common.h>
 
-typedef struct abd abd_t;
-typedef struct blkptr blkptr_t;
 typedef struct objset objset_t;
 typedef struct raidz_row raidz_row_t;
-typedef struct zio zio_t;
-typedef struct zio_bad_cksum zio_bad_cksum_t;
+
+/*
+   This struct is normally set with "zfs set zoff_*=on/off/<value>"
+   and passed around in zio_t.
+
+   The variables are ints instead of boolean_ts to allow for them to
+   be distinguished between being set by "zfs set" and being hardcoded
+   in the code.
+*/
+typedef struct zoff_prop {
+	int checksum;
+	int compress;
+	int decompress;
+	int raidz1_gen;
+	int raidz2_gen;
+	int raidz3_gen;
+	int raidz1_rec;
+	int raidz2_rec;
+	int raidz3_rec;
+} zoff_prop_t;
 
 /* set up some variables that need to be available before everything else */
 extern void zoff_init(void);

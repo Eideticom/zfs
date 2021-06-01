@@ -1,13 +1,9 @@
 #ifdef ZOFF
 
-#include <sys/abd.h>
 #include <sys/abd_impl.h>
 #include <sys/dmu_objset.h>
 #include <sys/vdev_disk.h>
 #include <sys/vdev_raidz_impl.h>
-#include <sys/zfs_file.h>
-#include <sys/zio.h>
-#include <sys/zio_bad_cksum.h>
 #include <sys/zoff.h>
 #include <sys/zoff_shim.h>
 
@@ -986,7 +982,7 @@ int zoff_create_gang(abd_t *gang) {
 
 int zoff_write_file(zfs_file_t *dst, abd_t *abd, ssize_t size,
     loff_t offset, ssize_t *resid, int *err) {
-	if (!zoff_provider) {
+	if (!zoff_provider || !zoff_provider->write.file) {
 		return ZOFF_FALLBACK;
 	}
 
@@ -1008,7 +1004,7 @@ int zoff_write_disk(struct block_device *bdev, zio_t *zio,
     size_t io_size, uint64_t io_offset, int rw,
     int failfast, int flags) {
 	#ifdef _KERNEL
-	if (!zoff_provider) {
+	if (!zoff_provider || !zoff_provider->write.disk) {
 		return ZOFF_FALLBACK;
 	}
 

@@ -112,6 +112,33 @@
  * or in concert to recover missing data columns.
  */
 
+#define	VDEV_RAIDZ_P		0
+#define	VDEV_RAIDZ_Q		1
+#define	VDEV_RAIDZ_R		2
+
+#define	VDEV_RAIDZ_MUL_2(x)	(((x) << 1) ^ (((x) & 0x80) ? 0x1d : 0))
+#define	VDEV_RAIDZ_MUL_4(x)	(VDEV_RAIDZ_MUL_2(VDEV_RAIDZ_MUL_2(x)))
+
+/*
+ * We provide a mechanism to perform the field multiplication operation on a
+ * 64-bit value all at once rather than a byte at a time. This works by
+ * creating a mask from the top bit in each byte and using that to
+ * conditionally apply the XOR of 0x1d.
+ */
+#define	VDEV_RAIDZ_64MUL_2(x, mask) \
+{ \
+	(mask) = (x) & 0x8080808080808080ULL; \
+	(mask) = ((mask) << 1) - ((mask) >> 7); \
+	(x) = (((x) << 1) & 0xfefefefefefefefeULL) ^ \
+	    ((mask) & 0x1d1d1d1d1d1d1d1dULL); \
+}
+
+#define	VDEV_RAIDZ_64MUL_4(x, mask) \
+{ \
+	VDEV_RAIDZ_64MUL_2((x), mask); \
+	VDEV_RAIDZ_64MUL_2((x), mask); \
+}
+
 static void
 vdev_raidz_row_free(raidz_row_t *rr)
 {

@@ -30,11 +30,45 @@
 #include <sys/kstat.h>
 #include <sys/abd.h>
 #include <sys/vdev_impl.h>
-#include <sys/vdev_raidz_enums.h>
 
 #ifdef  __cplusplus
 extern "C" {
 #endif
+
+#define	CODE_P		(0U)
+#define	CODE_Q		(1U)
+#define	CODE_R		(2U)
+
+#define	PARITY_P	(1U)
+#define	PARITY_PQ	(2U)
+#define	PARITY_PQR	(3U)
+
+#define	TARGET_X	(0U)
+#define	TARGET_Y	(1U)
+#define	TARGET_Z	(2U)
+
+/*
+ * Parity generation methods indexes
+ */
+enum raidz_math_gen_op {
+	RAIDZ_GEN_P = 0,
+	RAIDZ_GEN_PQ,
+	RAIDZ_GEN_PQR,
+	RAIDZ_GEN_NUM = 3
+};
+/*
+ * Data reconstruction methods indexes
+ */
+enum raidz_rec_op {
+	RAIDZ_REC_P = 0,
+	RAIDZ_REC_Q,
+	RAIDZ_REC_R,
+	RAIDZ_REC_PQ,
+	RAIDZ_REC_PR,
+	RAIDZ_REC_QR,
+	RAIDZ_REC_PQR,
+	RAIDZ_REC_NUM = 7
+};
 
 extern const char *raidz_gen_name[RAIDZ_GEN_NUM];
 extern const char *raidz_rec_name[RAIDZ_REC_NUM];

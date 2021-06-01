@@ -6,7 +6,6 @@
 #include <stddef.h>
 
 #ifdef _KERNEL
-#include <linux/bio.h>
 #include <linux/types.h>
 #else
 #include <stdint.h>
@@ -14,7 +13,7 @@
 struct block_device;
 #endif
 
-#include <sys/vdev_raidz_enums.h>
+#include <sys/zfs_file.h>
 #include <sys/zio_checksum_enums.h>
 #include <sys/zio_compress_enums.h>
 #include <sys/zoff_common.h>

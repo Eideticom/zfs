@@ -89,7 +89,6 @@ COMMON_H = \
 	vdev_initialize.h \
 	vdev_raidz.h \
 	vdev_raidz_impl.h \
-	vdev_raidz_enums.h \
 	vdev_rebuild.h \
 	vdev_removal.h \
 	vdev_trim.h \

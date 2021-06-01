@@ -1,10 +1,7 @@
 #include "disk.h"
-#include "private.h"
 
 #include <linux/bio.h>
 
-#include <linux/blkdev_compat.h>
-#include <sys/debug.h>     /* ASSERT */
 #include <sys/vdev_disk.h>
 #include <sys/zoff.h>
 
