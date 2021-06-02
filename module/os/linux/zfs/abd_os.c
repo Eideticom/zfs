@@ -947,11 +947,7 @@ abd_nr_pages_off(abd_t *abd, unsigned int size, size_t off)
 	    (pos >> PAGE_SHIFT));
 }
 
-#ifndef ZOFF
 static unsigned int
-#else
-unsigned int
-#endif
 bio_map(struct bio *bio, void *buf_ptr, unsigned int bio_size)
 {
 	unsigned int offset, size, i;
@@ -989,10 +985,6 @@ bio_map(struct bio *bio, void *buf_ptr, unsigned int bio_size)
 
 	return (bio_size);
 }
-
-#ifdef ZOFF
-EXPORT_SYMBOL(bio_map);
-#endif
 
 /*
  * bio_map for gang ABD.

@@ -45,6 +45,45 @@ koh_nr_pages_off(koh_t *koh, unsigned int size, size_t off)
 	    (pos >> PAGE_SHIFT));
 }
 
+static unsigned int
+koh_bio_map(struct bio *bio, void *buf_ptr, unsigned int bio_size)
+{
+	unsigned int offset, size, i;
+	struct page *page;
+
+	offset = offset_in_page(buf_ptr);
+	for (i = 0; i < bio->bi_max_vecs; i++) {
+		size = PAGE_SIZE - offset;
+
+		if (bio_size <= 0)
+			break;
+
+		if (size > bio_size)
+			size = bio_size;
+
+		if (is_vmalloc_addr(buf_ptr))
+			page = vmalloc_to_page(buf_ptr);
+		else
+			page = virt_to_page(buf_ptr);
+
+		/*
+		 * Some network related block device uses tcp_sendpage, which
+		 * doesn't behave well when using 0-count page, this is a
+		 * safety net to catch them.
+		 */
+		ASSERT3S(page_count(page), >, 0);
+
+		if (bio_add_page(bio, page, size, offset) != size)
+			break;
+
+		buf_ptr += size;
+		bio_size -= size;
+		offset = 0;
+	}
+
+	return (bio_size);
+}
+
 /*
  * Locate the ABD for the supplied offset in the gang ABD.
  * Return a new offset relative to the returned ABD.
@@ -104,7 +143,7 @@ koh_bio_map_off(struct bio *bio, koh_t *koh,
     unsigned int io_size, size_t off)
 {
 	if (koh_is_linear(koh))
-		return (bio_map(bio, ptr_start(koh, off), io_size));
+		return (koh_bio_map(bio, ptr_start(koh, off), io_size));
 
 	ASSERT(!koh_is_linear(koh));
 	ASSERT(koh_is_gang(koh));
