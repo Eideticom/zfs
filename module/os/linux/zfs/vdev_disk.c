@@ -39,7 +39,6 @@
 #include <linux/vfs_compat.h>
 
 #ifdef ZOFF
-#include <sys/abd_impl.h>
 #include <sys/zoff_shim.h>
 #endif
 

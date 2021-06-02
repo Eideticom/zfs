@@ -20,7 +20,7 @@ typedef struct zoff_hash_context {
 	zhe_t *table;
 } zhc_t;
 
-extern zhe_t *zhe_create(zhc_t *ctx, void *key);
+extern zhe_t *zhe_create(zhc_t *ctx, void *key, boolean_t lock);
 extern void zhe_destroy(zhe_t *zhe);
 
 extern void zoff_hash_context_init(zhc_t *ctx);

@@ -1,6 +1,5 @@
 #ifdef ZOFF
 
-#include <sys/abd_impl.h>
 #include <sys/dmu_objset.h>
 #include <sys/vdev_disk.h>
 #include <sys/vdev_raidz_impl.h>
@@ -111,7 +110,7 @@ zhe_t *create_zhe(void *key, size_t size) {
 		return NULL;
 	}
 
-	zhe_t *zhe = zhe_create(&ZOFF_HANDLES, key);
+	zhe_t *zhe = zhe_create(&ZOFF_HANDLES, key, B_FALSE);
 	if (!zhe) {
 		zhe_destroy(zhe);
 		return NULL;
@@ -158,7 +157,7 @@ int zoff_alloc(void *key, size_t size) {
 }
 
 /* create a new reference zhe and register it */
-int zoff_create_ref(void *ref_key, void *src_key, size_t size, size_t offset) {
+int zoff_create_ref(void *ref_key, void *src_key, size_t offset, size_t size) {
 	zoff_hash_context_write_lock(&ZOFF_HANDLES);
 
 	zhe_t *found = zoff_hash_find_mapping(&ZOFF_HANDLES, src_key);
@@ -168,7 +167,7 @@ int zoff_create_ref(void *ref_key, void *src_key, size_t size, size_t offset) {
 	}
 
 	/* zoff records this mapping as a reference */
-	zhe_t *zhe = zhe_create(&ZOFF_HANDLES, ref_key);
+	zhe_t *zhe = zhe_create(&ZOFF_HANDLES, ref_key, B_FALSE);
 	if (!zhe) {
 		zoff_hash_context_write_unlock(&ZOFF_HANDLES);
 		return ZOFF_ERROR;
@@ -325,8 +324,7 @@ int zoff_onload_cb(void *buf, size_t size, void *private) {
 }
 
 /* record a new abd -> zoff handle mapping */
-static
-void *zoff_offload_abd_private(abd_t *abd, size_t size, boolean_t lock) {
+void *zoff_offload_abd(abd_t *abd, size_t size) {
 	if (!zoff_provider) {
 		return NULL;
 	}
@@ -335,16 +333,12 @@ void *zoff_offload_abd_private(abd_t *abd, size_t size, boolean_t lock) {
 		return NULL;
 	}
 
-	if (lock == B_TRUE) {
-		zoff_hash_context_write_lock(&ZOFF_HANDLES);
-	}
+	zoff_hash_context_write_lock(&ZOFF_HANDLES);
 
 	zhe_t *zhe = zoff_hash_find_mapping(&ZOFF_HANDLES, abd);
 	if (zhe) {
 		/* already offloaded */
-		if (lock == B_TRUE) {
-			zoff_hash_context_write_unlock(&ZOFF_HANDLES);
-		}
+		zoff_hash_context_write_unlock(&ZOFF_HANDLES);
 		return zhe;
 	}
 
@@ -353,9 +347,7 @@ void *zoff_offload_abd_private(abd_t *abd, size_t size, boolean_t lock) {
 	/* offload */
 	zmv_t mv = { .handle = zhe->handle, .offset = 0 };
 	if (abd_iterate_func(abd, 0, size, zoff_offload_cb, &mv) != 0) {
-		if (lock == B_TRUE) {
-			zoff_hash_context_write_unlock(&ZOFF_HANDLES);
-		}
+		zoff_hash_context_write_unlock(&ZOFF_HANDLES);
 		destroy_zhe(zhe);
 		return NULL;
 	}
@@ -363,14 +355,8 @@ void *zoff_offload_abd_private(abd_t *abd, size_t size, boolean_t lock) {
 	/* record this mapping */
 	zoff_hash_register_offload(&ZOFF_HANDLES, zhe);
 
-	if (lock == B_TRUE) {
-		zoff_hash_context_write_unlock(&ZOFF_HANDLES);
-	}
+	zoff_hash_context_write_unlock(&ZOFF_HANDLES);
 	return zhe;
-}
-
-void *zoff_offload_abd(abd_t *abd, size_t size) {
-	return zoff_offload_abd_private(abd, size, B_TRUE);
 }
 
 /* move zoff buffer back into abd */
@@ -536,7 +522,7 @@ int zoff_alloc_raidz(zio_t *zio, raidz_row_t *rr) {
 	/* create references for column data */
 	for(uint64_t c = rr->rr_firstdatacol; (c < rr->rr_cols) && (good == B_TRUE); c++) {
 		/* create a new record */
-		zhe_t *zhe = zhe_create(&ZOFF_HANDLES, rr->rr_col[c].rc_abd);
+		zhe_t *zhe = zhe_create(&ZOFF_HANDLES, rr->rr_col[c].rc_abd, B_FALSE);
 		if (!zhe) {
 			good = B_FALSE;
 			break;
@@ -656,12 +642,12 @@ int zoff_free_raidz(raidz_row_t *rr) {
 }
 
 int zoff_change_key(void *dst, void *src) {
-    zoff_hash_context_write_lock(&ZOFF_HANDLES);
+	zoff_hash_context_write_lock(&ZOFF_HANDLES);
 
 	zhe_t *dst_zhe = zoff_hash_find_mapping(&ZOFF_HANDLES, dst);
 	if (dst_zhe) {
 		/* mapping already exists; don't overwrite */
-        zoff_hash_context_write_unlock(&ZOFF_HANDLES);
+		zoff_hash_context_write_unlock(&ZOFF_HANDLES);
 		return ZOFF_ERROR;
 	}
 
@@ -682,6 +668,25 @@ int zoff_change_key(void *dst, void *src) {
 	return ZOFF_OK;
 }
 
+int zoff_zero_fill(void *key, size_t offset, size_t size) {
+	if (!zoff_provider) {
+		return ZOFF_ERROR;
+	}
+
+	zoff_hash_context_read_lock(&ZOFF_HANDLES);
+	zhe_t *zhe = zoff_hash_find_mapping(&ZOFF_HANDLES, key);
+
+	if (!zhe) {
+		zoff_hash_context_read_unlock(&ZOFF_HANDLES);
+		return ZOFF_ERROR;
+	}
+
+	const int rc = zoff_provider->zero_fill(zhe->handle, offset, size);
+
+	zoff_hash_context_read_unlock(&ZOFF_HANDLES);
+	return rc;
+}
+
 static
 boolean_t zoff_all_zeros_handle(void *handle) {
 	return (zoff_provider->all_zeros(handle) == ZOFF_OK)?B_TRUE:B_FALSE;
@@ -692,12 +697,18 @@ boolean_t zoff_all_zeros(void *key) {
 		return B_FALSE;
 	}
 
+	zoff_hash_context_read_lock(&ZOFF_HANDLES);
 	zhe_t *zhe = zoff_hash_find_mapping(&ZOFF_HANDLES, key);
+
 	if (!zhe) {
+		zoff_hash_context_read_unlock(&ZOFF_HANDLES);
 		return B_FALSE;
 	}
 
-	return zoff_all_zeros_handle(zhe);
+	const int rc = zoff_all_zeros_handle(zhe);
+
+	zoff_hash_context_read_unlock(&ZOFF_HANDLES);
+	return rc;
 }
 
 int zoff_checksum_compute(abd_t *abd, enum zio_checksum alg, zio_byteorder_t order,
@@ -933,21 +944,27 @@ int zoff_create_gang(abd_t *gang) {
 		return ZOFF_FALLBACK;
 	}
 
+	if (abd_is_gang(gang) != B_TRUE) {
+		return ZOFF_FALLBACK;
+	}
+
 	/* count child abds */
 	size_t count = 0;
+	size_t offloaded = 0;
 	for (abd_t *cabd = list_head(&ABD_GANG(gang).abd_gang_chain);
 	    cabd != NULL;
 	    cabd = list_next(&ABD_GANG(gang).abd_gang_chain, cabd)) {
 		count++;
+		offloaded += (zoff_is_offloaded(cabd) == B_TRUE);
 	}
 
 	/* if none of the children abds are offloaded, */
 	/* there's no need to offload the gang         */
-	if (count == 0) {
+	if (offloaded == 0) {
 		return ZOFF_ERROR;
 	}
 
-	zhe_t *gang_zhe = zhe_create(&ZOFF_HANDLES, gang);
+	zhe_t *gang_zhe = zhe_create(&ZOFF_HANDLES, gang, B_TRUE);
 	if (!gang_zhe) {
 		return ZOFF_ERROR;
 	}

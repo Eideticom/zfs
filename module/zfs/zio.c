@@ -1819,13 +1819,9 @@ zio_write_compress(zio_t *zio)
 					   continue using zfs */
 					/* if cbuf is not offloaded, nothing happens */
 					zoff_onload(cbuf, cbuf, lsize);
-
-				    /* if the compressed data is offloaded, there's no point in zeroing the in-memory buffer */
-				#endif
-				abd_zero_off(cdata, psize, rounded - psize);
-				#ifdef ZOFF
 				}
 				#endif
+				abd_zero_off(cdata, psize, rounded - psize); /* will call offloader zeroing function */
 				psize = rounded;
 				zio_push_transform(zio, cdata,
 				    psize, lsize, NULL);
@@ -3830,6 +3826,7 @@ zio_vdev_io_start(zio_t *zio)
 		abd_t *abuf = abd_alloc_sametype(zio->io_abd, asize);
 		ASSERT(vd == vd->vdev_top);
 		if (zio->io_type == ZIO_TYPE_WRITE) {
+			/* both of these functions handle offloader buffers */
 			abd_copy(abuf, zio->io_abd, zio->io_size);
 			abd_zero_off(abuf, zio->io_size, asize - zio->io_size);
 		}

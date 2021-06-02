@@ -30,11 +30,8 @@
    offloaders may choose to present non-void handles.
 */
 
-/* init function - this should be the kernel modulle init, but kernel_offloader is not compiled as a separate kernel module */
+/* init function - this should be the kernel module init, but kernel_offloader is not compiled as a separate kernel module */
 void kernel_offloader_init(void);
-
-/* print handle information into a buffer */
-int kernel_offloader_handle_print(void *handle, char *buf, size_t size);
 
 /* offloader handle access */
 void *kernel_offloader_alloc(size_t size);

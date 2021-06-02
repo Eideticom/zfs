@@ -102,6 +102,10 @@
 #include <sys/zfs_context.h>
 #include <sys/zfs_znode.h>
 
+#ifdef ZOFF
+#include <sys/zoff_shim.h>
+#endif
+
 /* see block comment above for description */
 int zfs_abd_scatter_enabled = B_TRUE;
 
@@ -572,14 +576,22 @@ abd_get_offset(abd_t *sabd, size_t off)
 {
 	size_t size = sabd->abd_size > off ? sabd->abd_size - off : 0;
 	VERIFY3U(size, >, 0);
-	return (abd_get_offset_impl(NULL, sabd, off, size));
+	abd_t *dabd = (abd_get_offset_impl(NULL, sabd, off, size));
+	#ifdef ZOFF
+	zoff_create_ref(dabd, sabd, off, size);
+	#endif
+	return dabd;
 }
 
 abd_t *
 abd_get_offset_size(abd_t *sabd, size_t off, size_t size)
 {
 	ASSERT3U(off + size, <=, sabd->abd_size);
-	return (abd_get_offset_impl(NULL, sabd, off, size));
+	abd_t *dabd = (abd_get_offset_impl(NULL, sabd, off, size));
+	#ifdef ZOFF
+	zoff_create_ref(dabd, sabd, off, size);
+	#endif
+	return dabd;
 }
 
 /*
@@ -907,6 +919,12 @@ abd_zero_off_cb(void *buf, size_t size, void *private)
 void
 abd_zero_off(abd_t *abd, size_t off, size_t size)
 {
+	#ifdef ZOFF
+	if (zoff_zero_fill(abd, off, size) == ZOFF_OK) {
+		return;
+	}
+	#endif
+
 	(void) abd_iterate_func(abd, off, size, abd_zero_off_cb, NULL);
 }
 

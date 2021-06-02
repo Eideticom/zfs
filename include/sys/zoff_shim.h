@@ -12,6 +12,8 @@ struct block_device;
 #endif
 
 #include <sys/abd.h>
+#include <sys/abd_impl.h>
+#include <sys/spa.h>
 #include <sys/types.h>
 #include <sys/zfs_file.h>
 #include <sys/zio.h>
@@ -55,7 +57,7 @@ extern boolean_t zoff_is_offloaded(void *ptr);          /* check if a handle is 
 
 /* create a mapping between a key and an offloader handle without copying data */
 extern int zoff_alloc(void *key, size_t size);
-extern int zoff_create_ref(void *ref_key, void *key, size_t offset, size_t size);
+extern int zoff_create_ref(void *ref_key, void *src_key, size_t offset, size_t size);
 extern void zoff_free(void *key);
 
 /* additional functions that would normally be defined in abd.h */
@@ -83,6 +85,9 @@ extern int zoff_free_raidz(raidz_row_t *rr);
 
 /* remap an offloader buffer */
 extern int zoff_change_key(void *dst, void *src);
+
+/* fill a buffer with zeros */
+extern int zoff_zero_fill(void *key, size_t offset, size_t size);
 
 /* check if the offloader buffer is all zeros */
 extern boolean_t zoff_all_zeros(void *key);

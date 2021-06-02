@@ -29,7 +29,7 @@ void kernel_offloader_init(void) {
 
 /* get a starting address of a linear koh_t */
 void *ptr_start(koh_t *koh, size_t offset) {
-	return (void *) (((uintptr_t) koh->koh_u.linear.ptr) + offset);
+	return (void *) (((uintptr_t) LINEAR(koh).ptr) + offset);
 }
 
 /* convert the actual pointer to a handle (pretend the data is not accessible from the ZOFF base) */
@@ -45,27 +45,21 @@ void *unswizzle(void *handle) {
 /* not usually needed - buffers should almost always be KOH_REAL or KOH_REFERENCE */
 int koh_is_linear(koh_t *koh) {
 	return ((koh->type == KOH_REAL) ||
-	        (koh->type == KOH_REFERENCE));
+	    (koh->type == KOH_REFERENCE));
 }
 
 int koh_is_gang(koh_t *koh) {
-    return (koh->type == KOH_GANG);
-}
-
-int kernel_offloader_handle_print(void *handle, char *buf, size_t size) {
-    koh_t *koh = (koh_t *) unswizzle(handle);
-	return snprintf(buf, size, "kernel offloader handle %p: %p %zu\n",
-	    handle, koh->koh_u.linear.ptr, koh->koh_u.linear.size);
+	return (koh->type == KOH_GANG);
 }
 
 koh_t *kernel_offloader_alloc_local(size_t size) {
 	koh_t *koh = kmalloc(sizeof(koh_t), GFP_KERNEL);
 	if (koh) {
 		koh->type = KOH_REAL;
-		koh->koh_u.linear.ptr = kmalloc(size, GFP_KERNEL);
-		koh->koh_u.linear.size = size;
+		LINEAR(koh).ptr = kmalloc(size, GFP_KERNEL);
+		LINEAR(koh).size = size;
 
-		memset(ptr_start(koh, 0), 0, koh->koh_u.linear.size);
+		memset(ptr_start(koh, 0), 0, LINEAR(koh).size);
 	}
 	return koh;
 }
@@ -76,8 +70,8 @@ static koh_t *kernel_offloader_alloc_local_ref(koh_t *src, size_t size, size_t o
 		ref = kmalloc(sizeof(koh_t), GFP_KERNEL);
 		if (ref) {
 			ref->type = KOH_REFERENCE;
-			ref->koh_u.linear.ptr = ptr_start(src, offset);   /* same underlying buffer */
-			ref->koh_u.linear.size = size;                    /* should probably check offset + size < src->size */
+			LINEAR(ref).ptr = ptr_start(src, offset);   /* same underlying buffer */
+			LINEAR(ref).size = size;                    /* should probably check offset + size < src->size */
 		}
 	}
 	return ref;
@@ -87,12 +81,12 @@ void kernel_offloader_free_local(koh_t *koh) {
 	if (koh) {
 		switch (koh->type) {
 			case KOH_REAL:
-				kfree(koh->koh_u.linear.ptr);
+				kfree(LINEAR(koh).ptr);
 				break;
 			case KOH_REFERENCE:
 				break;
 			case KOH_GANG:
-				kfree(koh->koh_u.gang.members);
+				kfree(GANG(koh).members);
 				break;
 			case KOH_INVALID:
 			default:
@@ -125,7 +119,7 @@ void *kernel_offloader_copy_from_mem(void *handle, size_t offset, void *src, siz
 		return NULL;
 	}
 
-	if ((offset + size) > koh->koh_u.linear.size) {
+	if ((offset + size) > LINEAR(koh).size) {
 		return NULL;
 	}
 
@@ -142,7 +136,7 @@ void *kernel_offloader_copy_to_mem(void *handle, size_t offset, void *dst, size_
 		return NULL;
 	}
 
-	if ((offset + size) > koh->koh_u.linear.size) {
+	if ((offset + size) > LINEAR(koh).size) {
 		return NULL;
 	}
 
@@ -164,11 +158,11 @@ int kernel_offloader_copy_internal(void *dst_handle, size_t dst_offset,
 		return KERNEL_OFFLOADER_ERROR;
 	}
 
-	if (((dst_offset + size) > dst->koh_u.linear.size)) {
+	if (((dst_offset + size) > LINEAR(dst).size)) {
 		return KERNEL_OFFLOADER_ERROR;
 	}
 
-	if (((src_offset + size) > src->koh_u.linear.size)) {
+	if (((src_offset + size) > LINEAR(src).size)) {
 		return KERNEL_OFFLOADER_ERROR;
 	}
 
@@ -189,7 +183,7 @@ int kernel_offloader_all_zeros(void *handle) {
 	koh_t *koh = unswizzle(handle);
 	uint64_t *array = ptr_start(koh, 0);
 	size_t i;
-	for(i = 0; i < koh->koh_u.linear.size / sizeof(uint64_t); i++) {
+	for(i = 0; i < LINEAR(koh).size / sizeof(uint64_t); i++) {
 		if (array[i]) {
 			return KERNEL_OFFLOADER_BAD_RESULT;
 		}
@@ -202,9 +196,10 @@ void *kernel_offloader_alloc_gang(size_t max) {
 	koh_t *koh = kmalloc(sizeof(koh_t), GFP_KERNEL);
 	if (koh) {
 		koh->type = KOH_GANG;
-		koh->koh_u.gang.members = (koh_t **) kmalloc(sizeof(koh_t *) * max, GFP_KERNEL);
-		koh->koh_u.gang.count = 0;
-		koh->koh_u.gang.max = max;
+		GANG(koh).members = (koh_t **) kmalloc(sizeof(koh_t *) * max, GFP_KERNEL);
+		GANG(koh).count = 0;
+		GANG(koh).max = max;
+		GANG(koh).size = 0;
 	}
 	return swizzle(koh);
 }
@@ -224,6 +219,7 @@ int kernel_offloader_gang_add(void *gang_handle, void *new_member_handle) {
 
 	GANG(gang).members[GANG(gang).count] = new_member;
 	GANG(gang).count++;
+	GANG(gang).size += LINEAR(new_member).size;
 
 	return KERNEL_OFFLOADER_OK;
 }
@@ -309,8 +305,8 @@ int kernel_offloader_checksum_error(enum zio_checksum alg, zio_byteorder_t order
 	memcpy(expected_cksum, ptr_start(bp_cksum_koh, 0), sizeof(expected_cksum));
 
 	/* compute checksum */
-	/* TODO: data_koh->koh_u.linear.size is probably wrong */
-	if (kernel_offloader_checksum_native(data_koh, data_koh->koh_u.linear.size, actual_cksum) != KERNEL_OFFLOADER_OK) {
+	/* TODO: LINEAR(data_koh).size is probably wrong */
+	if (kernel_offloader_checksum_native(data_koh, LINEAR(data_koh).size, actual_cksum) != KERNEL_OFFLOADER_OK) {
 		return KERNEL_OFFLOADER_ERROR;
 	}
 
@@ -356,10 +352,10 @@ int kernel_offloader_checksum_error(enum zio_checksum alg, zio_byteorder_t order
 static int kernel_offloader_gzip_compress(koh_t *src, koh_t *dst,
     size_t s_len, int level,
     size_t *c_len) {
-	*c_len = dst->koh_u.linear.size;
+	*c_len = LINEAR(dst).size;
 
 	if (z_compress_level(ptr_start(dst, 0), c_len, ptr_start(src, 0), s_len, level) != Z_OK) {
-		if (*c_len != src->koh_u.linear.size) {
+		if (*c_len != LINEAR(src).size) {
 			return KERNEL_OFFLOADER_ERROR;
 		}
 		return KERNEL_OFFLOADER_OK;
@@ -372,7 +368,7 @@ static int kernel_offloader_gzip_compress(koh_t *src, koh_t *dst,
 static int kernel_offloader_gzip_decompress(koh_t *src, koh_t *dst,
     int level,
     size_t *c_len) {
-	if (z_uncompress(ptr_start(dst, 0), c_len, ptr_start(src, 0), src->koh_u.linear.size) != Z_OK) {
+	if (z_uncompress(ptr_start(dst, 0), c_len, ptr_start(src, 0), LINEAR(src).size) != Z_OK) {
 		return KERNEL_OFFLOADER_ERROR;
 	}
 
@@ -404,18 +400,6 @@ int kernel_offloader_compress(enum zio_compress alg,
 	if ((ZIO_COMPRESS_GZIP_1 <= alg) &&
 		(alg <= ZIO_COMPRESS_GZIP_9)) {
 		status = kernel_offloader_gzip_compress(src_koh, dst_koh, s_len, level, &ret_kzcr->c_len);
-	}
-
-	/* pad compressed buffer with zeros */
-	if (status == KERNEL_OFFLOADER_OK) {
-		size_t psize = ret_kzcr->c_len;
-		size_t rounded = (size_t)roundup(psize, spa_min_alloc);
-
-		/* if rounded > s_len (lsize), zfs will discard the compressed data buffer */
-		if (rounded <= s_len) {
-			memset(ptr_start(dst_koh, psize), 0, rounded - psize);
-			/* leave the compressed size alone - correct size will be set by zfs */
-		}
 	}
 
 	return status;
@@ -527,7 +511,7 @@ int kernel_offloader_write_file(zfs_file_t *fp, void *handle, size_t count,
 	}
 	else if (koh->type == KOH_GANG) {
 		/* write abds sequentially instead of serializing into a single buffer first */
-		for(size_t i = 0; !*err && (i < koh->koh_u.gang.count); i++) {
+		for(size_t i = 0; !*err && (i < GANG(koh).count); i++) {
 			*err = zfs_file_pwrite(fp, ptr_start(GANG(koh).members[i], 0),
 			    LINEAR(GANG(koh).members[i]).size, offset, resid);
 			offset += LINEAR(GANG(koh).members[i]).size;

@@ -31,7 +31,8 @@ struct kernel_offloader_handle {
 		struct {
 			koh_t **members;
 			size_t count;
-            size_t max;
+			size_t max;
+			size_t size;
 		} gang;
     } koh_u;
 };

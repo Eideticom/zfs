@@ -348,6 +348,7 @@ vdev_raidz_map_alloc(zio_t *zio, uint64_t ashift, uint64_t dcols,
 	if ((zio->io_prop.zp_zoff.raidz1_gen == 1) ||
 	    (zio->io_prop.zp_zoff.raidz2_gen == 1) ||
 	    (zio->io_prop.zp_zoff.raidz3_gen == 1)) {
+		/* offload if not already offloaded */
 		zoff_offload_abd(zio->io_abd, zio->io_size);
 
 		zoff_lock_raidz();

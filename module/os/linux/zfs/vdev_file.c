@@ -220,7 +220,17 @@ vdev_file_io_strategy(void *arg)
 	} else {
 		#ifdef ZOFF
 		if (zoff_write_file(vf->vf_file, zio->io_abd, size, off, &resid, &err) != ZOFF_OK) {
-			zoff_onload_abd(zio->io_abd, size);
+			if (abd_is_gang(zio->io_abd)) {
+				for (abd_t *cabd = list_head(&ABD_GANG(zio->io_abd).abd_gang_chain);
+				    cabd != NULL;
+				    cabd = list_next(&ABD_GANG(zio->io_abd).abd_gang_chain, cabd)) {
+					zoff_onload_abd(cabd, cabd->abd_size);
+				}
+				zoff_free(zio->io_abd);
+			}
+			else if (abd_is_linear(zio->io_abd)) {
+				zoff_onload_abd(zio->io_abd, size);
+			}
 		#endif
 		buf = abd_borrow_buf_copy(zio->io_abd, size);
 		err = zfs_file_pwrite(vf->vf_file, buf, size, off, &resid);

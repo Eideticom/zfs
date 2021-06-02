@@ -1,8 +1,17 @@
 #include "zoff_hash.h"
 
 /* allocate and set zhe members only - do not offload or update hash table */
-zhe_t *zhe_create(zhc_t *ctx, void *key) {
+zhe_t *zhe_create(zhc_t *ctx, void *key, boolean_t lock) {
+	if (lock == B_TRUE) {
+		zoff_hash_context_read_lock(ctx);
+	}
+
 	zhe_t *zhe = zoff_hash_find_mapping(ctx, key);
+
+	if (lock == B_TRUE) {
+		zoff_hash_context_read_unlock(ctx);
+	}
+
 	if (zhe) {
 		#ifdef _KERNEL
 		printk("Existing offloader entry with this kernel space address (%p) found. Not allocating.\n", key);
