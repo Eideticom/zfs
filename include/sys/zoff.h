@@ -52,7 +52,7 @@ typedef struct zoff_functions {
 	int (*zero_fill)(void *handle, size_t offset, size_t size);
 	int (*all_zeros)(void *handle);                            /* whether or not a buffer is all zeros */
 
-	/* used for vdev_file write */
+	/* created by vdev_queue_aggregate */
 	struct {
 		void *(*alloc)(size_t max);
 		int (*add)(void *gang_handle, void *new_member_handle);
