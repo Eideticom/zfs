@@ -58,10 +58,7 @@ extern boolean_t zoff_is_offloaded(void *ptr);          /* check if a handle is 
 /* create a mapping between a key and an offloader handle without copying data */
 extern int zoff_alloc(void *key, size_t size);
 extern int zoff_create_ref(void *ref_key, void *src_key, size_t offset, size_t size);
-extern void zoff_free(void *key);
-
-/* additional functions that would normally be defined in abd.h */
-extern void abd_free_zoff(abd_t *abd);                  /* deallocate abd's zoff handle without onloading */
+extern void zoff_free(void *key);                       /* deallocate handle without onloading */
 
 /* move data between from the offloader to memory */
 /* zoff_offload is not needed for now */

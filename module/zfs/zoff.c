@@ -202,14 +202,6 @@ void zoff_free(void *key) {
 	zoff_free_private(key, B_TRUE);
 }
 
-/*
-   clean up mapping if found; otherwise do nothing
-   lifetime of offloaded abd should be the same as the abd in memory
-*/
-void abd_free_zoff(abd_t *abd) {
-	zoff_free(abd);
-}
-
 boolean_t zoff_is_offloaded(void *ptr) {
 	zoff_hash_context_read_lock(&ZOFF_HANDLES);
 	zhe_t *found = zoff_hash_find_mapping(&ZOFF_HANDLES, ptr);

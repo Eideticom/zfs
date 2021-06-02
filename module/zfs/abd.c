@@ -303,7 +303,7 @@ abd_free(abd_t *abd)
 #endif
 
 	#ifdef ZOFF
-	abd_free_zoff(abd);
+	zoff_free(abd);
 	#endif
 
 	if (abd_is_gang(abd)) {
