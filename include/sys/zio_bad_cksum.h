@@ -1,5 +1,5 @@
 #ifndef _SYS_ZIO_BAD_CKSUM_H
-#define _SYS_ZIO_BAD_CKSUM_H
+#define	_SYS_ZIO_BAD_CKSUM_H
 
 #include <sys/spa.h>
 

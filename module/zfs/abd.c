@@ -302,9 +302,9 @@ abd_free(abd_t *abd)
 	IMPLY(abd->abd_flags & ABD_FLAG_OWNER, abd->abd_parent == NULL);
 #endif
 
-	#ifdef ZOFF
+#ifdef ZOFF
 	zoff_free(abd);
-	#endif
+#endif
 
 	if (abd_is_gang(abd)) {
 		abd_free_gang(abd);
@@ -577,10 +577,10 @@ abd_get_offset(abd_t *sabd, size_t off)
 	size_t size = sabd->abd_size > off ? sabd->abd_size - off : 0;
 	VERIFY3U(size, >, 0);
 	abd_t *dabd = (abd_get_offset_impl(NULL, sabd, off, size));
-	#ifdef ZOFF
+#ifdef ZOFF
 	zoff_create_ref(dabd, sabd, off, size);
-	#endif
-	return dabd;
+#endif
+	return (dabd);
 }
 
 abd_t *
@@ -588,10 +588,10 @@ abd_get_offset_size(abd_t *sabd, size_t off, size_t size)
 {
 	ASSERT3U(off + size, <=, sabd->abd_size);
 	abd_t *dabd = (abd_get_offset_impl(NULL, sabd, off, size));
-	#ifdef ZOFF
+#ifdef ZOFF
 	zoff_create_ref(dabd, sabd, off, size);
-	#endif
-	return dabd;
+#endif
+	return (dabd);
 }
 
 /*
@@ -919,11 +919,11 @@ abd_zero_off_cb(void *buf, size_t size, void *private)
 void
 abd_zero_off(abd_t *abd, size_t off, size_t size)
 {
-	#ifdef ZOFF
+#ifdef ZOFF
 	if (zoff_zero_fill(abd, off, size) == ZOFF_OK) {
 		return;
 	}
-	#endif
+#endif
 
 	(void) abd_iterate_func(abd, off, size, abd_zero_off_cb, NULL);
 }

@@ -402,20 +402,26 @@ zio_checksum_compute(zio_t *zio, enum zio_checksum checksum,
 		    sizeof (zio_cksum_t));
 	} else {
 		/* only offload non-embedded checksums */
-		#ifdef ZOFF
+#ifdef ZOFF
 		int zoff_rc = ZOFF_FALLBACK;
 
 		if (zio->io_prop.zp_zoff.checksum == 1) {
 			/* if data has not been offloaded yet, offload it */
 			zoff_offload_abd(abd, size);
 
-			/* checksum is stored in the bp */
-			/* alloc instead of offload because the original buffer is not useful */
-			zoff_alloc(zio->io_bp, sizeof(zio->io_bp->blk_cksum));
+			/*
+			 * checksum is stored in the bp
+			 *
+			 * alloc instead of offload because
+			 * the original buffer is not useful
+			 */
+			zoff_alloc(zio->io_bp, sizeof (zio->io_bp->blk_cksum));
 
 			zoff_rc = zoff_checksum_compute(abd, checksum,
 			    ZIO_CHECKSUM_NATIVE, size, bp,
-			    (BP_USES_CRYPT(bp) && BP_GET_TYPE(bp) != DMU_OT_OBJSET), insecure);
+			    (BP_USES_CRYPT(bp) &&
+			    BP_GET_TYPE(bp) != DMU_OT_OBJSET),
+			    insecure);
 		}
 
 		/* return here to leave the abd offloaded for the next stage */
@@ -427,9 +433,12 @@ zio_checksum_compute(zio_t *zio, enum zio_checksum checksum,
 		/* no need for offloaded bp any more */
 		zoff_free(zio->io_bp);
 
-		/* if failed, onload data for processing using the ZFS implemenation */
+		/*
+		 * if failed, onload data for processing
+		 * using the ZFS implemenation
+		 */
 		zoff_onload_abd(abd, size);
-		#endif
+#endif
 		saved = bp->blk_cksum;
 		ci->ci_func[0](abd, size, spa->spa_cksum_tmpls[checksum],
 		    &cksum);
@@ -563,39 +572,15 @@ zio_checksum_error(zio_t *zio, zio_bad_cksum_t *info)
 	blkptr_t *bp = zio->io_bp;
 	uint_t checksum = (bp == NULL ? zio->io_prop.zp_checksum :
 	    (BP_IS_GANG(bp) ? ZIO_CHECKSUM_GANG_HEADER : BP_GET_CHECKSUM(bp)));
-	int error = 0;
+	int error;
 	uint64_t size = (bp == NULL ? zio->io_size :
 	    (BP_IS_GANG(bp) ? SPA_GANGBLOCKSIZE : BP_GET_PSIZE(bp)));
 	uint64_t offset = zio->io_offset;
 	abd_t *data = zio->io_abd;
 	spa_t *spa = zio->io_spa;
 
-	/* #ifdef ZOFF */
-	/* if (zio->io_prop.zp_level == 0) { */
-	/* 	if (!(zio_checksum_table[checksum].ci_flags & ZCHECKSUM_FLAG_EMBEDDED)) { */
-	/* 		if (zoff_offload_bp(zio->io_bp) == ZOFF_OK) { */
-	/* 		    error = zoff_checksum_error(&zio->io_prop.zp_zoff, checksum, */
-	/* 		        BP_SHOULD_BYTESWAP(bp), data, size, bp, */
-	/* 		        (bp != NULL && BP_USES_CRYPT(bp) && */
-	/* 		        BP_GET_TYPE(bp) != DMU_OT_OBJSET), */
-	/* 		        (zio_checksum_table[checksum].ci_flags & ZCHECKSUM_FLAG_DEDUP), */
-    /*                 info); */
-	/* 		 } */
-	/* 	} */
-	/* } */
-
-	/* /\* if success, onload data so it is usable by the rest of the pipeline *\/ */
-	/* /\* if failed, onload data for processing using the ZFS implemenation *\/ */
-	/* zoff_onload_abd(data, size); */
-	/* zoff_onload_bp(zio->io_bp); */
-
-	/* if (error == ZOFF_FALLBACK) { */
-	/* #endif */
 	error = zio_checksum_error_impl(spa, bp, checksum, data, size,
 	    offset, info);
-	/* #ifdef ZOFF */
-	/* } */
-	/* #endif */
 
 	if (zio_injection_enabled && error == 0 && zio->io_error == 0) {
 		error = zio_handle_fault_injection(zio, ECKSUM);

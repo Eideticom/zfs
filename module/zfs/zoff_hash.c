@@ -13,23 +13,28 @@ zhe_t *zhe_create(zhc_t *ctx, void *key, boolean_t lock) {
 	}
 
 	if (zhe) {
-		#ifdef _KERNEL
-		printk("Existing offloader entry with this kernel space address (%p) found. Not allocating.\n", key);
-		return zhe;
-		#endif
+#ifdef _KERNEL
+		printk("Existing offloader entry with this "
+		    "kernel space address (%p) found. "
+		    "Not allocating.\n", key);
+		return (zhe);
+#endif
 	}
 
-	zhe = kmem_alloc(sizeof(zhe_t), KM_SLEEP);
+	zhe = kmem_alloc(sizeof (zhe_t), KM_SLEEP);
 	zhe->ptr = key;
 	zhe->handle = NULL;
 
-	return zhe;
+	return (zhe);
 }
 
-/* free zhe only - do not onload, free the offload buffer, or update the hash table */
+/*
+ * free zhe only - do not onload, free the
+ * offload buffer, or update the hash table
+ */
 void zhe_destroy(zhe_t *zhe) {
 	if (zhe) {
-		kmem_free(zhe, sizeof(*zhe));
+		kmem_free(zhe, sizeof (*zhe));
 	}
 }
 
@@ -42,9 +47,10 @@ void zoff_hash_context_destroy(zhc_t *ctx) {
 	if (ctx) {
 		zoff_hash_context_write_lock(ctx);
 
-		#ifdef _KERNEL
-		printk("Unfreed Offloader Handles: %u\n", HASH_COUNT(ctx->table));
-		#endif
+#ifdef _KERNEL
+		printk("Unfreed Offloader Handles: %u\n",
+		    HASH_COUNT(ctx->table));
+#endif
 
 		zhe_t *entry = NULL;
 		zhe_t *tmp;
@@ -88,7 +94,7 @@ void zoff_hash_context_write_unlock(zhc_t *ctx) {
 zhe_t *zoff_hash_find_mapping(zhc_t *ctx, const void *key) {
 	zhe_t *found = NULL;
 	HASH_FIND_PTR(ctx->table, &key, found);
-	return found;
+	return (found);
 }
 
 /* find a matching address and remove the entry */
@@ -97,18 +103,19 @@ zhe_t *zoff_hash_find_and_remove(zhc_t *ctx, const void *key) {
 	if (found) {
 		HASH_DEL(ctx->table, found);
 	}
-	return found;
+	return (found);
 }
 
 /* add only - do not create */
 void zoff_hash_register_offload(zhc_t *ctx, zhe_t *zhe) {
 	zhe_t *found = zoff_hash_find_mapping(ctx, zhe->ptr);
 	if (found) {
-		#ifdef _KERNEL
-		printk("Existing offloader entry with this kernel space address (%p) found. Nothing done.\n", zhe->ptr);
-		#endif
-	}
-	else {
+#ifdef _KERNEL
+		printk("Existing offloader entry with this "
+		    "kernel space address (%p) found. "
+			"Nothing done.\n", zhe->ptr);
+#endif
+	} else {
 		HASH_ADD_PTR(ctx->table, ptr, zhe);
 	}
 }

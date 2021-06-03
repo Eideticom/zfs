@@ -2080,9 +2080,9 @@ dmu_write_policy(objset_t *os, dnode_t *dn, int level, int wp, zio_prop_t *zp)
 	zp->zp_zpl_smallblk = DMU_OT_IS_FILE(zp->zp_type) ?
 	    os->os_zpl_special_smallblock : 0;
 
-	#ifdef ZOFF
+#ifdef ZOFF
 	zp->zp_zoff = os->os_zoff;
-	#endif
+#endif
 
 	ASSERT3U(zp->zp_compress, !=, ZIO_COMPRESS_INHERIT);
 }

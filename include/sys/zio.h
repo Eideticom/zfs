@@ -323,9 +323,9 @@ typedef struct zio_prop {
 	uint8_t			zp_mac[ZIO_DATA_MAC_LEN];
 	uint32_t		zp_zpl_smallblk;
 
-	#ifdef ZOFF
+#ifdef ZOFF
 	zoff_prop_t		zp_zoff;
-	#endif
+#endif
 } zio_prop_t;
 
 typedef struct zio_cksum_report zio_cksum_report_t;

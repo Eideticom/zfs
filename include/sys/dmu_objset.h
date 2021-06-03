@@ -133,9 +133,9 @@ struct objset {
 	zfs_redundant_metadata_type_t os_redundant_metadata;
 	uint64_t os_recordsize;
 
-	#ifdef ZOFF
+#ifdef ZOFF
 	zoff_prop_t os_zoff;
-	#endif
+#endif
 
 	/*
 	 * The next four values are used as a cache of whatever's on disk, and

@@ -1,5 +1,5 @@
 #ifndef _ZIO_COMPRESS_ENUMS_H
-#define _ZIO_COMPRESS_ENUMS_H
+#define	_ZIO_COMPRESS_ENUMS_H
 
 enum zio_compress {
 	ZIO_COMPRESS_INHERIT = 0,

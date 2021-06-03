@@ -1027,13 +1027,13 @@ dbuf_verify(dmu_buf_impl_t *db)
 			if (db->db_level == 0) {
 				uint64_t *buf = db->db.db_data;
 
-				#ifdef ZOFF
+#ifdef ZOFF
 				const int zeros = zoff_all_zeros(buf);
 				switch (zeros) {
 					case ZOFF_OK:
 						break;
 					case ZOFF_FALLBACK:;
-				#endif
+#endif
 
 				int i;
 
@@ -1041,14 +1041,14 @@ dbuf_verify(dmu_buf_impl_t *db)
 					ASSERT(buf[i] == 0);
 				}
 
-				#ifdef ZOFF
+#ifdef ZOFF
 						break;
 					case ZOFF_ERROR:
 					default:
 						ASSERT(zeros == ZOFF_OK);
 						break;
 				}
-				#endif
+#endif
 			} else {
 				blkptr_t *bps = db->db.db_data;
 				ASSERT3U(1 << DB_DNODE(db)->dn_indblkshift, ==,

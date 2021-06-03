@@ -697,7 +697,7 @@ dmu_objset_open_impl(spa_t *spa, dsl_dataset_t *ds, blkptr_t *bp,
 				    ZFS_PROP_SPECIAL_SMALL_BLOCKS),
 				    smallblk_changed_cb, os);
 			}
-			#ifdef ZOFF
+#ifdef ZOFF
 			if (err == 0) {
 				err = dsl_prop_register(ds,
 				    zfs_prop_to_name(ZFS_PROP_ZOFF_CHECKSUM),
@@ -743,7 +743,7 @@ dmu_objset_open_impl(spa_t *spa, dsl_dataset_t *ds, blkptr_t *bp,
 				    zfs_prop_to_name(ZFS_PROP_ZOFF_RAIDZ3_REC),
 				    zoff_raidz3_rec_changed_cb, os);
 			}
-			#endif
+#endif
 		}
 		if (err != 0) {
 			arc_buf_destroy(os->os_phys_buf, &os->os_phys_buf);
@@ -764,7 +764,7 @@ dmu_objset_open_impl(spa_t *spa, dsl_dataset_t *ds, blkptr_t *bp,
 		os->os_primary_cache = ZFS_CACHE_ALL;
 		os->os_secondary_cache = ZFS_CACHE_ALL;
 		os->os_dnodesize = DNODE_MIN_SIZE;
-		memset(&os->os_zoff, 0, sizeof(os->os_zoff));
+		memset(&os->os_zoff, 0, sizeof (os->os_zoff));
 	}
 
 	if (ds == NULL || !ds->ds_is_snapshot)

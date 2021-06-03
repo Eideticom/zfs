@@ -1,12 +1,12 @@
 #ifndef _KERNEL_OFFLOADER_RAIDZ_H
-#define _KERNEL_OFFLOADER_RAIDZ_H
+#define	_KERNEL_OFFLOADER_RAIDZ_H
 
 #include "private.h"
 
 typedef struct kernel_offloader_raidz {
 	size_t raidn; /* RAIDZ 1/2/3 */
 	size_t acols; /* column count */
-	koh_t **cols; /* array of column data - should be references into another buffer */
+	koh_t **cols; /* array of column data (references) */
 } korz_t;
 
 void

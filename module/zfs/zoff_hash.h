@@ -1,5 +1,5 @@
 #ifndef _ZOFF_HASH_H
-#define _ZOFF_HASH_H
+#define	_ZOFF_HASH_H
 
 #include <sys/zoff_common.h>
 
@@ -9,8 +9,8 @@
 
 /* struct for placing into hash table */
 typedef struct zoff_hash_entry {
-	void *ptr;         /* kernel space pointer */
-	void *handle;      /* handle to an offloader record */
+	void *ptr;	  /* kernel space pointer */
+	void *handle; /* handle to an offloader record */
 	UT_hash_handle hh;
 } zhe_t;
 

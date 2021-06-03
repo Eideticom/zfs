@@ -186,7 +186,7 @@ typedef enum {
 	ZFS_PROP_IVSET_GUID,		/* not exposed to the user */
 	ZFS_PROP_REDACTED,
 	ZFS_PROP_REDACT_SNAPS,
-	#ifdef ZOFF
+#ifdef ZOFF
 	ZFS_PROP_ZOFF_CHECKSUM,
 	ZFS_PROP_ZOFF_COMPRESS,
 	ZFS_PROP_ZOFF_DECOMPRESS,
@@ -196,7 +196,7 @@ typedef enum {
 	ZFS_PROP_ZOFF_RAIDZ1_REC,
 	ZFS_PROP_ZOFF_RAIDZ2_REC,
 	ZFS_PROP_ZOFF_RAIDZ3_REC,
-	#endif
+#endif
 	ZFS_NUM_PROPS
 } zfs_prop_t;
 

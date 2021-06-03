@@ -12,7 +12,7 @@
  */
 
 #ifndef MIN
-#define MIN(a, b) (((a) < (b))?(a):(b))
+#define	MIN(a, b) (((a) < (b))?(a):(b))
 #endif
 
 /*
@@ -28,7 +28,7 @@ koh_nr_pages_off(koh_t *koh, unsigned int size, size_t off)
 	if (koh_is_gang(koh)) {
 		unsigned long count = 0;
 
-		for(size_t i = 0; i < GANG(koh).count; i++) {
+		for (size_t i = 0; i < GANG(koh).count; i++) {
 			koh_t *ckoh = GANG(koh).members[i];
 			int mysize = MIN(size, LINEAR(ckoh).size - off);
 			count += koh_nr_pages_off(ckoh, mysize, off);
@@ -95,7 +95,7 @@ koh_gang_get_offset(koh_t *koh, size_t *off)
 	size_t i = 0;
 
 	ASSERT(koh_is_gang(koh));
-	for(i = 0; i < GANG(koh).count; i++) {
+	for (i = 0; i < GANG(koh).count; i++) {
 		ckoh = GANG(koh).members[i];
 		if (*off >= LINEAR(ckoh).size)
 			*off -= LINEAR(ckoh).size;
@@ -119,7 +119,8 @@ koh_gang_bio_map_off(struct bio *bio, koh_t *koh,
 {
 	ASSERT(koh_is_gang(koh));
 
-	for(size_t i = koh_gang_get_offset(koh, &off); i < GANG(koh).count; i++) {
+	for (size_t i = koh_gang_get_offset(koh, &off);
+	    i < GANG(koh).count; i++) {
 		koh_t *ckoh = GANG(koh).members[i];
 		ASSERT3U(off, <, LINEAR(ckoh).size);
 		int size = MIN(io_size, LINEAR(ckoh).size - off);
@@ -218,7 +219,8 @@ vdev_disk_dio_put(dio_request_t *dr)
 	return (rc);
 }
 
-BIO_END_IO_PROTO(kernel_offloader_disk_write_completion, bio, error) {
+BIO_END_IO_PROTO(kernel_offloader_disk_write_completion, bio, error)
+{
 	dio_request_t *dr = bio->bi_private;
 	int rc;
 
@@ -358,7 +360,7 @@ kernel_offloader_vdev_disk_physio(struct block_device *bdev, koh_t *koh,
 	 * Accessing outside the block device is never allowed.
 	 */
 	if (io_offset + io_size > bdev->bd_inode->i_size) {
-		return KERNEL_OFFLOADER_ERROR;
+		return (KERNEL_OFFLOADER_ERROR);
 	}
 
 retry:
@@ -411,7 +413,7 @@ retry:
 #endif
 		if (unlikely(dr->dr_bio[i] == NULL)) {
 			vdev_disk_dio_free(dr);
-			return KERNEL_OFFLOADER_ERROR;
+			return (KERNEL_OFFLOADER_ERROR);
 		}
 
 		/* Matching put called by vdev_disk_physio_completion */
@@ -419,7 +421,8 @@ retry:
 
 		bio_set_dev(dr->dr_bio[i], bdev);
 		BIO_BI_SECTOR(dr->dr_bio[i]) = bio_offset >> 9;
-		dr->dr_bio[i]->bi_end_io = kernel_offloader_disk_write_completion;
+		dr->dr_bio[i]->bi_end_io =
+		    kernel_offloader_disk_write_completion;
 		dr->dr_bio[i]->bi_private = dr;
 		bio_set_op_attrs(dr->dr_bio[i], rw, flags);
 

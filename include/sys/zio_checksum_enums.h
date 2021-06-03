@@ -1,5 +1,5 @@
 #ifndef _ZIO_CHECKSUM_ENUMS_H
-#define _ZIO_CHECKSUM_ENUMS_H
+#define	_ZIO_CHECKSUM_ENUMS_H
 
 enum zio_checksum {
 	ZIO_CHECKSUM_INHERIT = 0,

@@ -558,25 +558,25 @@ __vdev_disk_physio(struct block_device *bdev, zio_t *zio,
 		return (SET_ERROR(EIO));
 	}
 
-	#ifdef ZOFF
+#ifdef ZOFF
 	if (zoff_write_disk(bdev, zio, io_size, io_offset, rw,
 	    (zio && !(zio->io_flags & (ZIO_FLAG_IO_RETRY | ZIO_FLAG_TRYHARD))),
 	    flags) == ZOFF_OK) {
-		return 0;
+		return (0);
 	}
 
 	if (abd_is_gang(zio->io_abd)) {
-		for (abd_t *cabd = list_head(&ABD_GANG(zio->io_abd).abd_gang_chain);
-		     cabd != NULL;
-		     cabd = list_next(&ABD_GANG(zio->io_abd).abd_gang_chain, cabd)) {
+		for (abd_t *cabd = list_head(
+		    &ABD_GANG(zio->io_abd).abd_gang_chain);
+		    cabd != NULL; cabd = list_next(
+		    &ABD_GANG(zio->io_abd).abd_gang_chain, cabd)) {
 			zoff_onload_abd(cabd, cabd->abd_size);
 		}
 		zoff_free(zio->io_abd);
-	}
-	else if (abd_is_linear(zio->io_abd)) {
+	} else if (abd_is_linear(zio->io_abd)) {
 		zoff_onload_abd(zio->io_abd, io_size);
 	}
-	#endif
+#endif
 
 retry:
 	dr = vdev_disk_dio_alloc(bio_count);

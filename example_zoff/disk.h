@@ -1,10 +1,13 @@
 #ifndef _KERNEL_OFFLOADER_DISK_H
-#define _KERNEL_OFFLOADER_DISK_H
+#define	_KERNEL_OFFLOADER_DISK_H
 
 /* copied from module/os/linux/zfs/vdev_disk.c */
 
-/* these three have macros that are used by blkdev_compat.h and needs to come first */
-#include <sys/debug.h>     /* ASSERT */
+/*
+ * these three have macros that are used by
+ * blkdev_compat.h and needs to come first
+ */
+#include <sys/debug.h> /* ASSERT */
 #include <sys/types.h>
 #include <zfs_config.h>
 #include <linux/blkdev_compat.h>

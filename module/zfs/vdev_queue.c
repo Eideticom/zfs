@@ -847,9 +847,9 @@ vdev_queue_aggregate(vdev_queue_t *vq, zio_t *zio)
 	} while (dio != last);
 	ASSERT3U(abd_get_size(aio->io_abd), ==, aio->io_size);
 
-	#ifdef ZOFF
+#ifdef ZOFF
 	zoff_create_gang(aio->io_abd);
-	#endif
+#endif
 
 	/*
 	 * We need to drop the vdev queue's lock during zio_execute() to

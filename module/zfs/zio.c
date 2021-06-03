@@ -888,9 +888,9 @@ zio_create(zio_t *pio, spa_t *spa, uint64_t txg, const blkptr_t *bp,
 		if (zio->io_child_type == ZIO_CHILD_GANG)
 			zio->io_gang_leader = pio->io_gang_leader;
 
-		#ifdef ZOFF
+#ifdef ZOFF
 		zio->io_prop.zp_zoff = pio->io_prop.zp_zoff;
-		#endif
+#endif
 
 		zio_add_child(pio, zio);
 	}
@@ -1717,17 +1717,30 @@ zio_write_compress(zio_t *zio)
 	if (compress != ZIO_COMPRESS_OFF &&
 	    !(zio->io_flags & ZIO_FLAG_RAW_COMPRESS)) {
 		void *cbuf = zio_buf_alloc(lsize);
-		#ifdef ZOFF
+#ifdef ZOFF
 		int zoff_rc = ZOFF_FALLBACK;
-		/* not checking for errors since that would just be duplicate work */
+		/*
+		 * not checking for errors since that
+		 * would just be duplicate work
+		 */
 
 		if (zio->io_prop.zp_zoff.compress == 1) {
-			/* represent early source buffer offloading by offloading source abd here */
-			/* source abd is not erased, so the data is still valid */
+			/*
+			 * represent early source buffer offloading
+			 * by offloading source abd here
+			 *
+			 * source abd is not erased, so the data
+			 * is still valid
+			 */
 			zoff_offload_abd(zio->io_abd, lsize);
 
-			/* map the cbuf to a buffer for storing compressed data */
-			/* use cbuf instead of zio to allow for failed compresses to fall back to the source data */
+			/*
+			 * map the cbuf to a buffer for
+			 * storing compressed data
+			 *
+			 * use cbuf instead of zio to allow for failed
+			 * compresses to fall back to the source data
+			 */
 			zoff_alloc(cbuf, lsize);
 
 			/* run the offloader compression */
@@ -1737,39 +1750,59 @@ zio_write_compress(zio_t *zio)
 		}
 
 		if (zoff_rc != ZOFF_OK) {
-			zoff_free(cbuf);         /* no need for destination offloader buffer any more */
-			zoff_free(zio->io_abd);  /* remove offloaded source abd - kernel copy is still valid */
-		#endif
+			/*
+			 * no need for destination
+			 * offloader buffer any more
+			 */
+			zoff_free(cbuf);
+
+			/*
+			 * remove offloaded source abd
+			 * kernel copy is still valid
+			 */
+			zoff_free(zio->io_abd);
+#endif
 		psize = zio_compress_data(compress, zio->io_abd, cbuf, lsize,
 		    zp->zp_complevel);
-		#ifdef ZOFF
+#ifdef ZOFF
 		}
-		#endif
+#endif
 
 		if (psize == 0 || psize >= lsize) {
 			compress = ZIO_COMPRESS_OFF;
-			#ifdef ZOFF
-			/* drop compressed data buffer mapping before zfs frees
-			   its buffer to prevent pointer reuse from messing up
-			   mappings */
+#ifdef ZOFF
+			/*
+			 * drop compressed data buffer mapping before zfs frees
+			 * its buffer to prevent pointer reuse from messing up
+			 * mappings
+			 */
 			zoff_free(cbuf);
 
 			/* source abd is still offloaded */
-			#endif
+#endif
 			zio_buf_free(cbuf, lsize);
 		} else if (!zp->zp_dedup && !zp->zp_encrypt &&
 		    psize <= BPE_PAYLOAD_SIZE &&
 		    zp->zp_level == 0 && !DMU_OT_HAS_FILL(zp->zp_type) &&
 		    spa_feature_is_enabled(spa, SPA_FEATURE_EMBEDDED_DATA)) {
-			#ifdef ZOFF
-			/* compressed enough, but not handling embedded data, so force the data back into memory */
+#ifdef ZOFF
+			/*
+			 * compressed enough, but not handling embedded
+			 * data, so force the data back into memory
+			 */
 
-			/* should check if cbuf is offloaded, but there's no point in duplicating work */
+			/*
+			 * should check if cbuf is offloaded, but
+			 * there's no point in duplicating work
+			 */
 			zoff_onload(cbuf, cbuf, psize);
 
-			/* remove offloaded source abd - kernel copy is still valid */
+			/*
+			 * remove offloaded source abd
+			 * kernel copy is still valid
+			 */
 			zoff_free(zio->io_abd);
-			#endif
+#endif
 			encode_embedded_bp_compressed(bp,
 			    cbuf, compress, lsize, psize);
 			BPE_SET_ETYPE(bp, BP_EMBEDDED_TYPE_DATA);
@@ -1795,33 +1828,52 @@ zio_write_compress(zio_t *zio)
 			    spa->spa_min_alloc);
 			if (rounded >= lsize) {
 				compress = ZIO_COMPRESS_OFF;
-				#ifdef ZOFF
-				/* should check if cbuf is offloaded, but there's no point in duplicating work */
-				zoff_free(cbuf); /* drop compressed buffer if it is offloaded */
-				/* source abd is still offloaded */
-				#endif
-				/* drop the real buffer; cbuf is not offloaded anymore, so don't do anything to it */
+#ifdef ZOFF
+				/*
+				 * drop compressed buffer if it is offloaded
+				 * source abd is still offloaded
+				 */
+				zoff_free(cbuf);
+#endif
+				/*
+				 * drop the real buffer; cbuf is not offloaded
+				 * anymore, so don't do anything to it
+				 */
 				zio_buf_free(cbuf, lsize);
 				psize = lsize;
 			} else {
 				abd_t *cdata = abd_get_from_buf(cbuf, lsize);
 				abd_take_ownership_of_buf(cdata, B_TRUE);
-				#ifdef ZOFF
+#ifdef ZOFF
 				/* source abd no longer needed */
 				zoff_free(zio->io_abd);
 
-				/* compressed enough, so keep the compressed buffer */
-				/* remap the compressed data - zio will get cdata in zio_push_transform */
+				/*
+				 * compressed enough, so keep the
+				 * compressed buffer
+				 *
+				 * remap the compressed data - zio
+				 * will get cdata in
+				 * zio_push_transform
+				 */
 				if (zoff_change_key(cdata, cbuf) != ZOFF_OK) {
-					/* if changing the compressed buffer to map to
-					   the zio fails, onload the compressed buffer
-					   (automatically placing it into cdata) and
-					   continue using zfs */
-					/* if cbuf is not offloaded, nothing happens */
+					/*
+					 * if changing the compressed buffer
+					 * to map to the zio fails, onload
+					 * the compressed buffer (automatically
+					 * placing it into cdata) and continue
+					 * using zfs
+					 */
+
+					/*
+					 * if cbuf is not offloaded,
+					 * nothing happens
+					 */
 					zoff_onload(cbuf, cbuf, lsize);
 				}
-				#endif
-				abd_zero_off(cdata, psize, rounded - psize); /* will call offloader zeroing function */
+#endif
+				/* will call offloader zeroing function */
+				abd_zero_off(cdata, psize, rounded - psize);
 				psize = rounded;
 				zio_push_transform(zio, cdata,
 				    psize, lsize, NULL);

@@ -147,9 +147,10 @@
 static void fletcher_4_scalar_init(fletcher_4_ctx_t *ctx);
 static void fletcher_4_scalar_fini(fletcher_4_ctx_t *ctx, zio_cksum_t *zcp);
 #ifndef ZOFF
-static void fletcher_4_scalar_native(fletcher_4_ctx_t *ctx,
-    const void *buf, uint64_t size);
+static
 #endif
+void fletcher_4_scalar_native(fletcher_4_ctx_t *ctx,
+    const void *buf, uint64_t size);
 static void fletcher_4_scalar_byteswap(fletcher_4_ctx_t *ctx,
     const void *buf, uint64_t size);
 static boolean_t fletcher_4_scalar_valid(void);
@@ -316,10 +317,9 @@ fletcher_4_scalar_fini(fletcher_4_ctx_t *ctx, zio_cksum_t *zcp)
 }
 
 #ifndef ZOFF
-static void
-#else
-void
+static
 #endif
+void
 fletcher_4_scalar_native(fletcher_4_ctx_t *ctx, const void *buf,
     uint64_t size)
 {

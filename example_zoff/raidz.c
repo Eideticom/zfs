@@ -1,5 +1,5 @@
 #include <linux/string.h>
-#include <sys/debug.h>     /* ASSERT */
+#include <sys/debug.h>	/* ASSERT */
 
 #include "raidz.h"
 
@@ -99,17 +99,18 @@ vdev_raidz_pqr_func(void *buf, size_t size, void *private)
 void
 vdev_raidz_generate_parity_p(korz_t *korz)
 {
-	uint64_t *p = korz->cols[VDEV_RAIDZ_P]->koh_u.linear.ptr;
+	uint64_t *p = LINEAR(korz->cols[VDEV_RAIDZ_P]).ptr;
 	int c;
 
 	for (c = korz->raidn; c < korz->acols; c++) {
 		koh_t *koh = korz->cols[c];
 
 		if (c == korz->raidn) {
-			memcpy(p, koh->koh_u.linear.ptr, koh->koh_u.linear.size);
+			memcpy(p, LINEAR(koh).ptr, LINEAR(koh).size);
 		} else {
 			struct pqr_struct pqr = { p, NULL, NULL };
-			vdev_raidz_p_func(koh->koh_u.linear.ptr, koh->koh_u.linear.size, &pqr);
+			vdev_raidz_p_func(LINEAR(koh).ptr,
+			    LINEAR(koh).size, &pqr);
 		}
 	}
 }
@@ -117,23 +118,23 @@ vdev_raidz_generate_parity_p(korz_t *korz)
 void
 vdev_raidz_generate_parity_pq(korz_t *korz)
 {
-	uint64_t *p = korz->cols[VDEV_RAIDZ_P]->koh_u.linear.ptr;
-	uint64_t *q = korz->cols[VDEV_RAIDZ_Q]->koh_u.linear.ptr;
-	uint64_t pcnt = korz->cols[VDEV_RAIDZ_P]->koh_u.linear.size / sizeof (p[0]);
+	uint64_t *p = LINEAR(korz->cols[VDEV_RAIDZ_P]).ptr;
+	uint64_t *q = LINEAR(korz->cols[VDEV_RAIDZ_Q]).ptr;
+	uint64_t pcnt = LINEAR(korz->cols[VDEV_RAIDZ_P]).size / sizeof (p[0]);
 	int c;
 	uint64_t i;
-	ASSERT(korz->cols[VDEV_RAIDZ_P]->koh_u.linear.size ==
-	    korz->cols[VDEV_RAIDZ_Q]->koh_u.linear.size);
+	ASSERT(LINEAR(korz->cols[VDEV_RAIDZ_P]).size ==
+	    LINEAR(korz->cols[VDEV_RAIDZ_Q]).size);
 
 	for (c = korz->raidn; c < korz->acols; c++) {
 		koh_t *koh = korz->cols[c];
 
-		uint64_t ccnt = koh->koh_u.linear.size / sizeof (p[0]);
+		uint64_t ccnt = LINEAR(koh).size / sizeof (p[0]);
 
 		if (c == korz->raidn) {
 			ASSERT(ccnt == pcnt || ccnt == 0);
-			(void) memcpy(p, koh->koh_u.linear.ptr, koh->koh_u.linear.size);
-			(void) memcpy(q, p, koh->koh_u.linear.size);
+			(void) memcpy(p, LINEAR(koh).ptr, LINEAR(koh).size);
+			(void) memcpy(q, p, LINEAR(koh).size);
 
 			for (i = ccnt; i < pcnt; i++) {
 				p[i] = 0;
@@ -144,7 +145,8 @@ vdev_raidz_generate_parity_pq(korz_t *korz)
 			uint64_t mask = 0;
 
 			ASSERT(ccnt <= pcnt);
-			vdev_raidz_pq_func(koh->koh_u.linear.ptr, koh->koh_u.linear.size, &pqr);
+			vdev_raidz_pq_func(LINEAR(koh).ptr,
+			    LINEAR(koh).size, &pqr);
 
 			/*
 			 * Treat short columns as though they are full of 0s.
@@ -160,27 +162,27 @@ vdev_raidz_generate_parity_pq(korz_t *korz)
 void
 vdev_raidz_generate_parity_pqr(korz_t *korz)
 {
-	uint64_t *p = korz->cols[VDEV_RAIDZ_P]->koh_u.linear.ptr;
-	uint64_t *q = korz->cols[VDEV_RAIDZ_Q]->koh_u.linear.ptr;
-	uint64_t *r = korz->cols[VDEV_RAIDZ_R]->koh_u.linear.ptr;
-	uint64_t pcnt = korz->cols[VDEV_RAIDZ_P]->koh_u.linear.size / sizeof (p[0]);
+	uint64_t *p = LINEAR(korz->cols[VDEV_RAIDZ_P]).ptr;
+	uint64_t *q = LINEAR(korz->cols[VDEV_RAIDZ_Q]).ptr;
+	uint64_t *r = LINEAR(korz->cols[VDEV_RAIDZ_R]).ptr;
+	uint64_t pcnt = LINEAR(korz->cols[VDEV_RAIDZ_P]).size / sizeof (p[0]);
 	int c;
 	uint64_t i;
-	ASSERT(korz->cols[VDEV_RAIDZ_P]->koh_u.linear.size ==
-	    korz->cols[VDEV_RAIDZ_Q]->koh_u.linear.size);
-	ASSERT(korz->cols[VDEV_RAIDZ_P]->koh_u.linear.size ==
-	    korz->cols[VDEV_RAIDZ_R]->koh_u.linear.size);
+	ASSERT(LINEAR(korz->cols[VDEV_RAIDZ_P]).size ==
+	    LINEAR(korz->cols[VDEV_RAIDZ_Q]).size);
+	ASSERT(LINEAR(korz->cols[VDEV_RAIDZ_P]).size ==
+	    LINEAR(korz->cols[VDEV_RAIDZ_R]).size);
 
 	for (c = korz->raidn; c < korz->acols; c++) {
 		koh_t *koh = korz->cols[c];
 
-		uint64_t ccnt = koh->koh_u.linear.size / sizeof (p[0]);
+		uint64_t ccnt = LINEAR(koh).size / sizeof (p[0]);
 
 		if (c == korz->raidn) {
 			ASSERT(ccnt == pcnt || ccnt == 0);
-			(void) memcpy(p, koh->koh_u.linear.ptr, koh->koh_u.linear.size);
-			(void) memcpy(q, p, koh->koh_u.linear.size);
-			(void) memcpy(r, p, koh->koh_u.linear.size);
+			(void) memcpy(p, LINEAR(koh).ptr, LINEAR(koh).size);
+			(void) memcpy(q, p, LINEAR(koh).size);
+			(void) memcpy(r, p, LINEAR(koh).size);
 
 			for (i = ccnt; i < pcnt; i++) {
 				p[i] = 0;
@@ -192,7 +194,8 @@ vdev_raidz_generate_parity_pqr(korz_t *korz)
 			uint64_t mask;
 
 			ASSERT(ccnt <= pcnt);
-			vdev_raidz_pqr_func(koh->koh_u.linear.ptr, koh->koh_u.linear.size, &pqr);
+			vdev_raidz_pqr_func(LINEAR(koh).ptr,
+			    LINEAR(koh).size, &pqr);
 			/*
 			 * Treat short columns as though they are full of 0s.
 			 * Note that there's therefore nothing needed for P.

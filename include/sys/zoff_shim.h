@@ -1,7 +1,7 @@
 #ifdef ZOFF
 
 #ifndef _ZOFF_SHIM_H
-#define _ZOFF_SHIM_H
+#define	_ZOFF_SHIM_H
 
 #ifdef _KERNEL
 #include <linux/types.h>
@@ -26,13 +26,13 @@ typedef struct objset objset_t;
 typedef struct raidz_row raidz_row_t;
 
 /*
-   This struct is normally set with "zfs set zoff_*=on/off/<value>"
-   and passed around in zio_t.
-
-   The variables are ints instead of boolean_ts to allow for them to
-   be distinguished between being set by "zfs set" and being hardcoded
-   in the code.
-*/
+ * This struct is normally set with "zfs set zoff_*=on/off/<value>"
+ * and passed around in zio_t.
+ *
+ * The variables are ints instead of boolean_ts to allow for them to
+ * be distinguished between being set by "zfs set" and being hardcoded
+ * in the code.
+ */
 typedef struct zoff_prop {
 	int checksum;
 	int compress;
@@ -51,14 +51,23 @@ extern void zoff_fini(void);
 
 extern void zoff_on(objset_t *os, const char *name);
 extern void zoff_off(objset_t *os, const char *name);
-extern boolean_t zoff_usable(void);                     /* whether or not ZOFF is usable, if it is enabled */
 
-extern boolean_t zoff_is_offloaded(void *ptr);          /* check if a handle is associated with this pointer */
+/* whether or not ZOFF is usable, if it is enabled */
+extern boolean_t zoff_usable(void);
 
-/* create a mapping between a key and an offloader handle without copying data */
+/* check if a handle is associated with this pointer */
+extern boolean_t zoff_is_offloaded(void *ptr);
+
+/*
+ * create a mapping between a key and an
+ * offloader handle without copying data
+ */
 extern int zoff_alloc(void *key, size_t size);
-extern int zoff_create_ref(void *ref_key, void *src_key, size_t offset, size_t size);
-extern void zoff_free(void *key);                       /* deallocate handle without onloading */
+extern int zoff_create_ref(void *ref_key, void *src_key,
+    size_t offset, size_t size);
+
+/* deallocate handle without onloading */
+extern void zoff_free(void *key);
 
 /* move data between from the offloader to memory */
 /* zoff_offload is not needed for now */
@@ -77,7 +86,6 @@ extern void zoff_lock_raidz(void);
 extern void zoff_unlock_raidz(void);
 extern int zoff_alloc_raidz(zio_t *zio, raidz_row_t *rr);
 extern int zoff_cleanup_raidz(zio_t *zio, raidz_row_t *rr);
-extern int zoff_onload_raidz(zio_t *zio, raidz_row_t *rr, boolean_t remove);
 extern int zoff_free_raidz(raidz_row_t *rr);
 
 /* remap an offloader buffer */
@@ -89,28 +97,20 @@ extern int zoff_zero_fill(void *key, size_t offset, size_t size);
 /* check if the offloader buffer is all zeros */
 extern boolean_t zoff_all_zeros(void *key);
 
-extern int zoff_checksum_compute(abd_t *abd, enum zio_checksum alg, zio_byteorder_t order,
-    uint64_t size, blkptr_t *bp,
-    boolean_t handle_crypt, boolean_t insecure);
-extern int zoff_checksum_error(zoff_prop_t *zoff, enum zio_checksum alg, zio_byteorder_t order,
-    abd_t *abd, uint64_t size, const blkptr_t *bp,
-    int encrypted, int dedup, zio_bad_cksum_t *info);
-
 extern int zoff_compress(enum zio_compress c, abd_t *src,
     void *cbuf, size_t s_len, uint8_t level,
     uint64_t *c_len, uint64_t spa_min_alloc);
 
-// extern int zoff_decompress(zoff_prop_t *zoff, enum zio_compress c,
-//     abd_t *src, abd_t *dst,
-//     int level,
-//     int *status);
-
 extern int zoff_raidz_gen(zio_t *zio, raidz_row_t *rr);
 
-// extern int zoff_raidz_rec(zoff_prop_t *zoff, struct raidz_row *rr,
-//     const int *parity_valid, const int *dt, const int nbaddata);
+extern int zoff_checksum_compute(abd_t *abd, enum zio_checksum alg,
+    zio_byteorder_t order, uint64_t size, blkptr_t *bp,
+    boolean_t handle_crypt, boolean_t insecure);
 
-/* vdev_file sometimes writes gangs */
+/*
+ * vdev_queue_aggregate creates gangs that
+ * get passed to vdev_file and vdev_disk
+ */
 extern int zoff_create_gang(abd_t *gang);
 
 extern int zoff_write_file(zfs_file_t *dst, abd_t *abd, ssize_t size,
