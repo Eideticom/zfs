@@ -42,7 +42,7 @@ typedef struct zoff_functions {
 
 	void *(*alloc)(size_t size);                               /* get a new offloader handle */
 	void *(*alloc_ref)(void *src_handle,
-	    size_t size, size_t offset);                           /* get a reference to an existing offloader handle */
+	    size_t offset, size_t size);                           /* get a reference to an existing offloader handle */
 	void (*free)(void *handle);                                /* free an offloader handle */
 
 	int (*copy_from_mem)(zmv_t *mv, void *buf, size_t size);   /* memory buf -> offloader  */

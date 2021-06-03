@@ -174,7 +174,7 @@ int zoff_create_ref(void *ref_key, void *src_key, size_t offset, size_t size) {
 	}
 
 	/* offloader creates a reference */
-	zhe->handle = zoff_provider->alloc_ref(found->handle, size, offset);
+	zhe->handle = zoff_provider->alloc_ref(found->handle, offset, size);
 
 	zoff_hash_register_offload(&ZOFF_HANDLES, zhe);
 
@@ -521,7 +521,7 @@ int zoff_alloc_raidz(zio_t *zio, raidz_row_t *rr) {
 		}
 
 		/* create an offloader reference */
-		zhe->handle = zoff_provider->alloc_ref(found->handle, rr->rr_col[c].rc_size, off);
+		zhe->handle = zoff_provider->alloc_ref(found->handle, off, rr->rr_col[c].rc_size);
 
 		/* assign this reference to column c */
 		if (zoff_provider->raid.set_col(rr_handle, c, zhe->handle) != ZOFF_OK) {

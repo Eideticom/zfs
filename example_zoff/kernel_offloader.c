@@ -64,7 +64,7 @@ koh_t *kernel_offloader_alloc_local(size_t size) {
 	return koh;
 }
 
-static koh_t *kernel_offloader_alloc_local_ref(koh_t *src, size_t size, size_t offset) {
+static koh_t *kernel_offloader_alloc_local_ref(koh_t *src, size_t offset, size_t size) {
 	koh_t *ref = NULL;
 	if (src) {
 		ref = kmalloc(sizeof(koh_t), GFP_KERNEL);
@@ -101,8 +101,8 @@ void *kernel_offloader_alloc(size_t size) {
 	return swizzle(kernel_offloader_alloc_local(size));
 }
 
-void *kernel_offloader_alloc_ref(void *src_handle, size_t size, size_t offset) {
-	return swizzle(kernel_offloader_alloc_local_ref(unswizzle(src_handle), size, offset));
+void *kernel_offloader_alloc_ref(void *src_handle, size_t offset, size_t size) {
+	return swizzle(kernel_offloader_alloc_local_ref(unswizzle(src_handle), offset, size));
 }
 
 void kernel_offloader_free(void *handle) {

@@ -35,7 +35,7 @@ void kernel_offloader_init(void);
 
 /* offloader handle access */
 void *kernel_offloader_alloc(size_t size);
-void *kernel_offloader_alloc_ref(void *src, size_t size, size_t offset);
+void *kernel_offloader_alloc_ref(void *src, size_t offset, size_t size);
 void  kernel_offloader_free(void *handle);
 void *kernel_offloader_copy_from_mem(void *handle, size_t offset, void *src, size_t size);
 void *kernel_offloader_copy_to_mem(void *handle, size_t offset, void *dst, size_t size);
