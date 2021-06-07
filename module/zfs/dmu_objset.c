@@ -231,9 +231,11 @@ dedup_changed_cb(void *arg, uint64_t newval)
 	os->os_dedup_checksum = checksum & ZIO_CHECKSUM_MASK;
 	os->os_dedup_verify = !!(checksum & ZIO_CHECKSUM_VERIFY);
 
+#ifdef ZOFF
 	if (os->os_dedup_verify == B_TRUE) {
 		zoff_off(os, "dedup verify");
 	}
+#endif
 }
 
 static void
@@ -800,7 +802,9 @@ dmu_objset_open_impl(spa_t *spa, dsl_dataset_t *ds, blkptr_t *bp,
 		os->os_primary_cache = ZFS_CACHE_ALL;
 		os->os_secondary_cache = ZFS_CACHE_ALL;
 		os->os_dnodesize = DNODE_MIN_SIZE;
+#ifdef ZOFF
 		memset(&os->os_zoff, 0, sizeof (os->os_zoff));
+#endif
 	}
 
 	if (ds == NULL || !ds->ds_is_snapshot)
