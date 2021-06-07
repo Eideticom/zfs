@@ -466,249 +466,6 @@ zoff_onload_abd(abd_t *abd, size_t size)
 	return (zoff_onload_abd_private(abd, size, B_TRUE, B_TRUE));
 }
 
-void
-zoff_lock_raidz(void)
-{
-	zoff_hash_context_write_lock(&ZOFF_HANDLES);
-}
-
-void
-zoff_unlock_raidz(void)
-{
-	zoff_hash_context_write_unlock(&ZOFF_HANDLES);
-}
-
-static boolean_t
-zoff_has_raidz(zoff_prop_t *zoff, int raidn, boolean_t gen, boolean_t rec)
-{
-	if (!zoff_provider ||
-	    !zoff_provider->raid.alloc ||
-	    !zoff_provider->raid.set_col ||
-	    !zoff_provider->raid.free) {
-		return (ZOFF_FALLBACK);
-	}
-
-	boolean_t good = B_FALSE;
-
-	if (gen == B_TRUE) {
-		switch (raidn) {
-			case 1:
-				good = (zoff_provider->raid.gen.z1 &&
-				    (zoff->raidz1_gen == 1));
-				break;
-			case 2:
-				good = (zoff_provider->raid.gen.z2 &&
-				    (zoff->raidz2_gen == 1));
-				break;
-			case 3:
-				good = (zoff_provider->raid.gen.z3 &&
-				    (zoff->raidz3_gen == 1));
-				break;
-			default:
-				break;
-		}
-	}
-
-	if (rec == B_TRUE) {
-		switch (raidn) {
-			case 1:
-				good &= (zoff_provider->raid.rec.z1 &&
-				    (zoff->raidz1_rec == 1));
-				break;
-			case 2:
-				good &= (zoff_provider->raid.rec.z2 &&
-				    (zoff->raidz2_rec == 1));
-				break;
-			case 3:
-				good &= (zoff_provider->raid.rec.z3 &&
-				    (zoff->raidz3_rec == 1));
-				break;
-			default:
-				break;
-		}
-	}
-
-	return (good);
-}
-
-int
-zoff_alloc_raidz(zio_t *zio, raidz_row_t *rr)
-{
-	if (!zio || !rr) {
-		return (ZOFF_ERROR);
-	}
-
-	if (zoff_has_raidz(&zio->io_prop.zp_zoff, rr->rr_firstdatacol,
-	    B_TRUE, B_FALSE) != B_TRUE) {
-		return (ZOFF_FALLBACK);
-	}
-
-	/* find the source data on the offloader */
-	zhe_t *found = zoff_hash_find_mapping(&ZOFF_HANDLES, zio->io_abd);
-	if (!found) {
-		return (ZOFF_ERROR);
-	}
-
-	/*
-	 * allocates the rr offloader struct, but
-	 * does not fill in the column data
-	 */
-	void *rr_handle = zoff_provider->raid.alloc(rr->rr_firstdatacol,
-	    rr->rr_cols);
-	if (!rr_handle) {
-		return (ZOFF_ERROR);
-	}
-
-	boolean_t good = found?B_TRUE:B_FALSE;
-
-	/* allocate new space for parity */
-	for (uint64_t c = 0; (c < rr->rr_firstdatacol) && (good == B_TRUE);
-	    c++) {
-		zhe_t *zhe = create_zhe(rr->rr_col[c].rc_abd,
-		    rr->rr_col[c].rc_size);
-		if (!zhe) {
-			good = B_FALSE;
-			break;
-		}
-
-		/* assign this allocation to column c */
-		if (zoff_provider->raid.set_col(rr_handle, c,
-		    zhe->handle) != ZOFF_OK) {
-			good = B_FALSE;
-			break;
-		}
-
-		zoff_hash_register_offload(&ZOFF_HANDLES, zhe);
-	}
-
-	uint64_t off = 0;
-
-	/* create references for column data */
-	for (uint64_t c = rr->rr_firstdatacol;
-	    (c < rr->rr_cols) && (good == B_TRUE);
-	    c++) {
-		/* create a new record */
-		zhe_t *zhe = zhe_create(&ZOFF_HANDLES, rr->rr_col[c].rc_abd,
-		    B_FALSE);
-		if (!zhe) {
-			good = B_FALSE;
-			break;
-		}
-
-		/* create an offloader reference */
-		zhe->handle = zoff_provider->alloc_ref(found->handle, off,
-		    rr->rr_col[c].rc_size);
-
-		/* assign this reference to column c */
-		if (zoff_provider->raid.set_col(rr_handle, c,
-		    zhe->handle) != ZOFF_OK) {
-			good = B_FALSE;
-			break;
-		}
-
-		zoff_hash_register_offload(&ZOFF_HANDLES, zhe);
-
-		off += rr->rr_col[c].rc_size;
-	}
-
-	if (good != B_TRUE) {
-		zoff_provider->raid.free(rr_handle);
-		return (ZOFF_ERROR);
-	}
-
-	zhe_t *rr_zhe = create_zhe(rr, 0);
-	if (!rr_zhe) {
-		zoff_provider->raid.free(rr_handle);
-		return (ZOFF_ERROR);
-	}
-
-	rr_zhe->handle = rr_handle;
-
-	zoff_hash_register_offload(&ZOFF_HANDLES, rr_zhe);
-	return (ZOFF_OK);
-}
-
-/* no onloading happens - onload the zio if the data is needed */
-static int
-zoff_free_raidz_private(raidz_row_t *rr, boolean_t lock)
-{
-	if (!rr) {
-		return (ZOFF_ERROR);
-	}
-
-	if (lock == B_TRUE) {
-		zoff_hash_context_write_lock(&ZOFF_HANDLES);
-	}
-
-	/* remove zhe from hash table, but do not deallocate */
-	zhe_t *rr_zhe = zoff_hash_find_and_remove(&ZOFF_HANDLES, rr);
-	if (!rr_zhe) {
-		if (lock == B_TRUE) {
-			zoff_hash_context_write_unlock(&ZOFF_HANDLES);
-		}
-		return (ZOFF_FALLBACK);
-	}
-
-	/*
-	 * no need to check if raidz is working
-	 * either raidz is fine, and the rr_zhe->handle
-	 * can be deallocated, or raidz is down, and
-	 * there's nothing that can be done on the
-	 * offloader anyways
-	 */
-	zoff_provider->raid.free(rr_zhe->handle);
-
-	/*
-	 * clean up columns because they are not
-	 * removed by zoff_provider->raidz.free
-	 */
-	for (int c = 0; c < rr->rr_cols; c++) {
-		zoff_free_private(rr->rr_col[c].rc_abd, B_FALSE);
-	}
-
-	if (lock == B_TRUE) {
-		zoff_hash_context_write_unlock(&ZOFF_HANDLES);
-	}
-
-	zhe_destroy(rr_zhe);
-
-	return (ZOFF_OK);
-}
-
-/* onload abd and delete raidz_row_t stuff */
-int
-zoff_cleanup_raidz(zio_t *zio, raidz_row_t *rr)
-{
-	if (!zio || !rr) {
-		return (ZOFF_ERROR);
-	}
-
-	if (zoff_has_raidz(&zio->io_prop.zp_zoff, rr->rr_firstdatacol,
-	    B_TRUE, B_FALSE) != B_TRUE) {
-		return (ZOFF_FALLBACK);
-	}
-
-	/*
-	 * bring data back to zio, which should
-	 * place data into parent automatically
-	 */
-	zoff_onload_abd_private(zio->io_abd, zio->io_abd->abd_size,
-	    B_FALSE, B_TRUE);
-
-	/* don't bring parity columns back */
-	/* raidz failed, so parity columns will be bad */
-
-	zoff_free_raidz_private(rr, B_FALSE);
-
-	return (ZOFF_OK);
-}
-
-int
-zoff_free_raidz(raidz_row_t *rr)
-{
-	return (zoff_free_raidz_private(rr, B_TRUE));
-}
-
 int
 zoff_change_key(void *dst, void *src)
 {
@@ -915,6 +672,168 @@ zoff_checksum_compute(abd_t *abd, enum zio_checksum alg, zio_byteorder_t order,
 	return (rc);
 }
 
+void
+zoff_raidz_lock(void)
+{
+	zoff_hash_context_write_lock(&ZOFF_HANDLES);
+}
+
+void
+zoff_raidz_unlock(void)
+{
+	zoff_hash_context_write_unlock(&ZOFF_HANDLES);
+}
+
+static boolean_t
+zoff_has_raidz(zoff_prop_t *zoff, int raidn, boolean_t gen, boolean_t rec)
+{
+	if (!zoff_provider ||
+	    !zoff_provider->raid.alloc ||
+	    !zoff_provider->raid.set_col ||
+	    !zoff_provider->raid.free) {
+		return (ZOFF_FALLBACK);
+	}
+
+	boolean_t good = B_FALSE;
+
+	if (gen == B_TRUE) {
+		switch (raidn) {
+			case 1:
+				good = (zoff_provider->raid.gen.z1 &&
+				    (zoff->raidz1_gen == 1));
+				break;
+			case 2:
+				good = (zoff_provider->raid.gen.z2 &&
+				    (zoff->raidz2_gen == 1));
+				break;
+			case 3:
+				good = (zoff_provider->raid.gen.z3 &&
+				    (zoff->raidz3_gen == 1));
+				break;
+			default:
+				break;
+		}
+	}
+
+	if (rec == B_TRUE) {
+		switch (raidn) {
+			case 1:
+				good &= (zoff_provider->raid.rec.z1 &&
+				    (zoff->raidz1_rec == 1));
+				break;
+			case 2:
+				good &= (zoff_provider->raid.rec.z2 &&
+				    (zoff->raidz2_rec == 1));
+				break;
+			case 3:
+				good &= (zoff_provider->raid.rec.z3 &&
+				    (zoff->raidz3_rec == 1));
+				break;
+			default:
+				break;
+		}
+	}
+
+	return (good);
+}
+
+int
+zoff_raidz_alloc(zio_t *zio, raidz_row_t *rr)
+{
+	if (!zio || !rr) {
+		return (ZOFF_ERROR);
+	}
+
+	if (zoff_has_raidz(&zio->io_prop.zp_zoff, rr->rr_firstdatacol,
+	    B_TRUE, B_FALSE) != B_TRUE) {
+		return (ZOFF_FALLBACK);
+	}
+
+	/* find the source data on the offloader */
+	zhe_t *found = zoff_hash_find_mapping(&ZOFF_HANDLES, zio->io_abd);
+	if (!found) {
+		return (ZOFF_ERROR);
+	}
+
+	/*
+	 * allocates the rr offloader struct, but
+	 * does not fill in the column data
+	 */
+	void *rr_handle = zoff_provider->raid.alloc(rr->rr_firstdatacol,
+	    rr->rr_cols);
+	if (!rr_handle) {
+		return (ZOFF_ERROR);
+	}
+
+	boolean_t good = found?B_TRUE:B_FALSE;
+
+	/* allocate new space for parity */
+	for (uint64_t c = 0; (c < rr->rr_firstdatacol) && (good == B_TRUE);
+	    c++) {
+		zhe_t *zhe = create_zhe(rr->rr_col[c].rc_abd,
+		    rr->rr_col[c].rc_size);
+		if (!zhe) {
+			good = B_FALSE;
+			break;
+		}
+
+		/* assign this allocation to column c */
+		if (zoff_provider->raid.set_col(rr_handle, c,
+		    zhe->handle) != ZOFF_OK) {
+			good = B_FALSE;
+			break;
+		}
+
+		zoff_hash_register_offload(&ZOFF_HANDLES, zhe);
+	}
+
+	uint64_t off = 0;
+
+	/* create references for column data */
+	for (uint64_t c = rr->rr_firstdatacol;
+	    (c < rr->rr_cols) && (good == B_TRUE);
+	    c++) {
+		/* create a new record */
+		zhe_t *zhe = zhe_create(&ZOFF_HANDLES, rr->rr_col[c].rc_abd,
+		    B_FALSE);
+		if (!zhe) {
+			good = B_FALSE;
+			break;
+		}
+
+		/* create an offloader reference */
+		zhe->handle = zoff_provider->alloc_ref(found->handle, off,
+		    rr->rr_col[c].rc_size);
+
+		/* assign this reference to column c */
+		if (zoff_provider->raid.set_col(rr_handle, c,
+		    zhe->handle) != ZOFF_OK) {
+			good = B_FALSE;
+			break;
+		}
+
+		zoff_hash_register_offload(&ZOFF_HANDLES, zhe);
+
+		off += rr->rr_col[c].rc_size;
+	}
+
+	if (good != B_TRUE) {
+		zoff_provider->raid.free(rr_handle);
+		return (ZOFF_ERROR);
+	}
+
+	zhe_t *rr_zhe = create_zhe(rr, 0);
+	if (!rr_zhe) {
+		zoff_provider->raid.free(rr_handle);
+		return (ZOFF_ERROR);
+	}
+
+	rr_zhe->handle = rr_handle;
+
+	zoff_hash_register_offload(&ZOFF_HANDLES, rr_zhe);
+	return (ZOFF_OK);
+}
+
 int
 zoff_raidz_gen(zio_t *zio, raidz_row_t *rr)
 {
@@ -948,6 +867,87 @@ zoff_raidz_gen(zio_t *zio, raidz_row_t *rr)
 	}
 
 	return (rc);
+}
+
+/* no onloading happens - onload the zio if the data is needed */
+static int
+zoff_raidz_free_private(raidz_row_t *rr, boolean_t lock)
+{
+	if (!rr) {
+		return (ZOFF_ERROR);
+	}
+
+	if (lock == B_TRUE) {
+		zoff_hash_context_write_lock(&ZOFF_HANDLES);
+	}
+
+	/* remove zhe from hash table, but do not deallocate */
+	zhe_t *rr_zhe = zoff_hash_find_and_remove(&ZOFF_HANDLES, rr);
+	if (!rr_zhe) {
+		if (lock == B_TRUE) {
+			zoff_hash_context_write_unlock(&ZOFF_HANDLES);
+		}
+		return (ZOFF_FALLBACK);
+	}
+
+	/*
+	 * no need to check if raidz is working
+	 * either raidz is fine, and the rr_zhe->handle
+	 * can be deallocated, or raidz is down, and
+	 * there's nothing that can be done on the
+	 * offloader anyways
+	 */
+	zoff_provider->raid.free(rr_zhe->handle);
+
+	/*
+	 * clean up columns because they are not
+	 * removed by zoff_provider->raidz.free
+	 */
+	for (int c = 0; c < rr->rr_cols; c++) {
+		zoff_free_private(rr->rr_col[c].rc_abd, B_FALSE);
+	}
+
+	if (lock == B_TRUE) {
+		zoff_hash_context_write_unlock(&ZOFF_HANDLES);
+	}
+
+	zhe_destroy(rr_zhe);
+
+	return (ZOFF_OK);
+}
+
+/* onload abd and delete raidz_row_t stuff */
+int
+zoff_raidz_cleanup(zio_t *zio, raidz_row_t *rr)
+{
+	if (!zio || !rr) {
+		return (ZOFF_ERROR);
+	}
+
+	if (zoff_has_raidz(&zio->io_prop.zp_zoff, rr->rr_firstdatacol,
+	    B_TRUE, B_FALSE) != B_TRUE) {
+		return (ZOFF_FALLBACK);
+	}
+
+	/*
+	 * bring data back to zio, which should
+	 * place data into parent automatically
+	 */
+	zoff_onload_abd_private(zio->io_abd, zio->io_abd->abd_size,
+	    B_FALSE, B_TRUE);
+
+	/* don't bring parity columns back */
+	/* raidz failed, so parity columns will be bad */
+
+	zoff_raidz_free_private(rr, B_FALSE);
+
+	return (ZOFF_OK);
+}
+
+int
+zoff_raidz_free(raidz_row_t *rr)
+{
+	return (zoff_raidz_free_private(rr, B_TRUE));
 }
 
 int

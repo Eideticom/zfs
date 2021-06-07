@@ -143,7 +143,7 @@ static void
 vdev_raidz_row_free(raidz_row_t *rr)
 {
 #ifdef ZOFF
-	zoff_free_raidz(rr);
+	zoff_raidz_free(rr);
 #endif
 
 	for (int c = 0; c < rr->rr_cols; c++) {
@@ -351,11 +351,11 @@ vdev_raidz_map_alloc(zio_t *zio, uint64_t ashift, uint64_t dcols,
 		/* offload if not already offloaded */
 		zoff_offload_abd(zio->io_abd, zio->io_size);
 
-		zoff_lock_raidz();
-		if (zoff_alloc_raidz(zio, rr) != ZOFF_OK) {
-			zoff_cleanup_raidz(zio, rr);
+		zoff_raidz_lock();
+		if (zoff_raidz_alloc(zio, rr) != ZOFF_OK) {
+			zoff_raidz_cleanup(zio, rr);
 		}
-		zoff_unlock_raidz();
+		zoff_raidz_unlock();
 	}
 #endif
 
@@ -1555,14 +1555,14 @@ vdev_raidz_io_start_write(zio_t *zio, raidz_row_t *rr, uint64_t ashift)
 	 * to be able to use zio
 	 */
 #ifdef ZOFF
-	zoff_lock_raidz();
+	zoff_raidz_lock();
 	if (zoff_raidz_gen(zio, rr) != ZOFF_OK) {
-		zoff_cleanup_raidz(zio, rr);
+		zoff_raidz_cleanup(zio, rr);
 #endif
 	vdev_raidz_generate_parity_row(rm, rr);
 #ifdef ZOFF
 	}
-	zoff_unlock_raidz();
+	zoff_raidz_unlock();
 #endif
 
 	for (c = 0; c < rr->rr_cols; c++) {

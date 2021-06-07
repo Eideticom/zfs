@@ -81,13 +81,6 @@ extern int zoff_onload_bp(blkptr_t *bp);
 extern void *zoff_offload_abd(abd_t *abd, size_t size);
 extern int zoff_onload_abd(abd_t *abd, size_t size);
 
-/* raidz */
-extern void zoff_lock_raidz(void);
-extern void zoff_unlock_raidz(void);
-extern int zoff_alloc_raidz(zio_t *zio, raidz_row_t *rr);
-extern int zoff_cleanup_raidz(zio_t *zio, raidz_row_t *rr);
-extern int zoff_free_raidz(raidz_row_t *rr);
-
 /* remap an offloader buffer */
 extern int zoff_change_key(void *dst, void *src);
 
@@ -101,11 +94,17 @@ extern int zoff_compress(enum zio_compress c, abd_t *src,
     void *cbuf, size_t s_len, uint8_t level,
     uint64_t *c_len, uint64_t spa_min_alloc);
 
-extern int zoff_raidz_gen(zio_t *zio, raidz_row_t *rr);
-
 extern int zoff_checksum_compute(abd_t *abd, enum zio_checksum alg,
     zio_byteorder_t order, uint64_t size, blkptr_t *bp,
     boolean_t handle_crypt, boolean_t insecure);
+
+/* raidz */
+extern void zoff_raidz_lock(void);
+extern void zoff_raidz_unlock(void);
+extern int zoff_raidz_alloc(zio_t *zio, raidz_row_t *rr);
+extern int zoff_raidz_gen(zio_t *zio, raidz_row_t *rr);
+extern int zoff_raidz_cleanup(zio_t *zio, raidz_row_t *rr);
+extern int zoff_raidz_free(raidz_row_t *rr);
 
 /*
  * vdev_queue_aggregate creates gangs that
