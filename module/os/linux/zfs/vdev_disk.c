@@ -559,10 +559,13 @@ __vdev_disk_physio(struct block_device *bdev, zio_t *zio,
 	}
 
 #ifdef ZOFF
-	if (zoff_write_disk(bdev, zio, io_size, io_offset, rw,
-	    (zio && !(zio->io_flags & (ZIO_FLAG_IO_RETRY | ZIO_FLAG_TRYHARD))),
-	    flags) == ZOFF_OK) {
-		return (0);
+	if (zio->io_prop.zp_zoff.disk_write == 1) {
+		if (zoff_write_disk(bdev, zio, io_size, io_offset, rw,
+		    (zio && !(zio->io_flags &
+		    (ZIO_FLAG_IO_RETRY | ZIO_FLAG_TRYHARD))),
+		    flags) == ZOFF_OK) {
+			return (0);
+		}
 	}
 
 	if (abd_is_gang(zio->io_abd)) {

@@ -219,8 +219,13 @@ vdev_file_io_strategy(void *arg)
 		abd_return_buf_copy(zio->io_abd, buf, size);
 	} else {
 #ifdef ZOFF
-		if (zoff_write_file(vf->vf_file, zio->io_abd,
-		    size, off, &resid, &err) != ZOFF_OK) {
+		int zoff_rc = ZOFF_FALLBACK;
+		if (zio->io_prop.zp_zoff.file_write == 1) {
+			zoff_rc = zoff_write_file(vf->vf_file, zio->io_abd,
+			    size, off, &resid, &err);
+		}
+
+		if (zoff_rc != ZOFF_OK) {
 			if (abd_is_gang(zio->io_abd)) {
 				for (abd_t *cabd = list_head(
 				    &ABD_GANG(zio->io_abd).abd_gang_chain);

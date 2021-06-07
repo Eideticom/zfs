@@ -528,6 +528,12 @@ zfs_prop_init(void)
 	zprop_register_index(ZFS_PROP_ZOFF_RAIDZ3_REC, "zoff_raidz3_rec",
 	    1, PROP_INHERIT, ZFS_TYPE_FILESYSTEM, "on | off",
 	    "zoff_raidz3_rec", boolean_table);
+	zprop_register_index(ZFS_PROP_ZOFF_FILE_WRITE, "zoff_file_write",
+	    1, PROP_INHERIT, ZFS_TYPE_FILESYSTEM, "on | off",
+	    "zoff_file_write", boolean_table);
+	zprop_register_index(ZFS_PROP_ZOFF_DISK_WRITE, "zoff_disk_write",
+	    1, PROP_INHERIT, ZFS_TYPE_FILESYSTEM, "on | off",
+	    "zoff_disk_write", boolean_table);
 #endif
 
 	/* default index properties */

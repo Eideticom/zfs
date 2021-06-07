@@ -26,7 +26,7 @@ typedef struct objset objset_t;
 typedef struct raidz_row raidz_row_t;
 
 /*
- * This struct is normally set with "zfs set zoff_*=on/off/<value>"
+ * This struct is normally set with "zfs set <property>=on/off/<value>"
  * and passed around in zio_t.
  *
  * The variables are ints instead of boolean_ts to allow for them to
@@ -34,15 +34,17 @@ typedef struct raidz_row raidz_row_t;
  * in the code.
  */
 typedef struct zoff_prop {
-	int checksum;
 	int compress;
 	int decompress;
+	int checksum;
 	int raidz1_gen;
 	int raidz2_gen;
 	int raidz3_gen;
 	int raidz1_rec;
 	int raidz2_rec;
 	int raidz3_rec;
+	int file_write;
+	int disk_write;
 } zoff_prop_t;
 
 /* set up some variables that need to be available before everything else */
