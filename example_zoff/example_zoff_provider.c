@@ -56,20 +56,6 @@ example_copy_to_mem(zmv_t *mv, void *buf, size_t size)
 }
 
 static int
-example_copy_internal(zmv_t *dst, zmv_t *src, size_t size)
-{
-	const int rc = kernel_offloader_copy_internal(dst->handle, dst->offset,
-	    src->handle, src->offset,
-	    size);
-
-	if (rc == KERNEL_OFFLOADER_OK) {
-		dst->offset += size;
-	}
-
-	return (translate_rc(rc));
-}
-
-static int
 example_zero_fill(void *handle, size_t offset, size_t size)
 {
 	return (translate_rc(kernel_offloader_zero_fill(handle, offset, size)));
@@ -208,7 +194,6 @@ static const zoff_functions_t example_zoff_functions = {
 	.free             = kernel_offloader_free,
 	.copy_from_mem    = example_copy_from_mem,
 	.copy_to_mem      = example_copy_to_mem,
-	.copy_internal    = example_copy_internal,
 	.zero_fill        = example_zero_fill,
 	.all_zeros        = example_all_zeros,
 	.gang             = {

@@ -55,9 +55,6 @@ typedef struct zoff_functions {
 	/* offloader  -> memory buf */
 	int (*copy_to_mem)(zmv_t *mv, void *buf, size_t size);
 
-	/* offloader  -> offloader  */
-	int (*copy_internal)(zmv_t *dst, zmv_t *src, size_t size);
-
 	/* fill in a buffer with zeros */
 	int (*zero_fill)(void *handle, size_t offset, size_t size);
 

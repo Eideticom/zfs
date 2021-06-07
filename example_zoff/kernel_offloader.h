@@ -44,9 +44,6 @@ void *kernel_offloader_copy_from_mem(void *handle, size_t offset,
     void *src, size_t size);
 void *kernel_offloader_copy_to_mem(void *handle, size_t offset,
     void *dst, size_t size);
-int kernel_offloader_copy_internal(void *dst_handle, size_t dst_offset,
-    void *src_handle, size_t src_offset,
-    size_t size);
 int kernel_offloader_zero_fill(void *handle, size_t offset, size_t size);
 int kernel_offloader_all_zeros(void *handle);
 

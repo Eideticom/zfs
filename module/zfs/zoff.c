@@ -54,7 +54,6 @@ zoff_provider_sane(const zoff_functions_t *provider)
 	    provider->free &&
 	    provider->copy_from_mem &&
 	    provider->copy_to_mem &&
-	    provider->copy_internal &&
 	    provider->zero_fill &&
 	    provider->all_zeros	&&
 	    provider->gang.alloc &&

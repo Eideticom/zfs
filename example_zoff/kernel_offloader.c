@@ -198,37 +198,6 @@ kernel_offloader_copy_to_mem(void *handle, size_t offset,
 }
 
 int
-kernel_offloader_copy_internal(void *dst_handle, size_t dst_offset,
-    void *src_handle, size_t src_offset, size_t size)
-{
-	koh_t *dst = unswizzle(dst_handle);
-	koh_t *src = unswizzle(src_handle);
-
-	if (!dst || !src) {
-		return (KERNEL_OFFLOADER_ERROR);
-	}
-
-	if (!koh_is_linear(dst) ||
-	    !koh_is_linear(src)) {
-		return (KERNEL_OFFLOADER_ERROR);
-	}
-
-	if (((dst_offset + size) > LINEAR(dst).size)) {
-		return (KERNEL_OFFLOADER_ERROR);
-	}
-
-	if (((src_offset + size) > LINEAR(src).size)) {
-		return (KERNEL_OFFLOADER_ERROR);
-	}
-
-	memcpy(ptr_start(dst, dst_offset),
-	    ptr_start(src, src_offset),
-	    size);
-
-	return (KERNEL_OFFLOADER_OK);
-}
-
-int
 kernel_offloader_zero_fill(void *handle, size_t offset, size_t size)
 {
 	koh_t *koh = unswizzle(handle);
