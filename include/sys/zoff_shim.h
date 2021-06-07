@@ -13,11 +13,9 @@ struct block_device;
 
 #include <sys/abd.h>
 #include <sys/abd_impl.h>
-#include <sys/spa.h>
 #include <sys/types.h>
 #include <sys/zfs_file.h>
 #include <sys/zio.h>
-#include <sys/zio_bad_cksum.h>
 #include <sys/zio_checksum_enums.h>
 #include <sys/zio_compress_enums.h>
 #include <sys/zoff_common.h>
