@@ -398,8 +398,7 @@ zoff_offload_abd(abd_t *abd, size_t size)
 
 /* move zoff buffer back into abd */
 static int
-zoff_onload_abd_private(abd_t *abd, size_t size,
-    boolean_t lock, boolean_t remove)
+zoff_onload_abd_private(abd_t *abd, size_t size, boolean_t lock)
 {
 	if (!zoff_provider) {
 		return (ZOFF_FALLBACK);
@@ -411,19 +410,10 @@ zoff_onload_abd_private(abd_t *abd, size_t size,
 
 	if (lock == B_TRUE) {
 		zoff_hash_context_write_lock(&ZOFF_HANDLES);
-	} else {
-		zoff_hash_context_read_lock(&ZOFF_HANDLES);
 	}
 
-	zhe_t *zhe = NULL;
-	if (remove == B_TRUE) {
-		/* remove zhe from hash table, but do not deallocate */
-		zhe = zoff_hash_find_and_remove(&ZOFF_HANDLES, abd);
-	} else {
-		/* find the zhe from hash table only */
-		zhe = zoff_hash_find_mapping(&ZOFF_HANDLES, abd);
-	}
-
+	/* remove zhe from hash table, but do not deallocate */
+	zhe_t *zhe = zoff_hash_find_and_remove(&ZOFF_HANDLES, abd);
 	if (!zhe) {
 		/*
 		 * either already onloaded or missing record
@@ -431,8 +421,6 @@ zoff_onload_abd_private(abd_t *abd, size_t size,
 		 */
 		if (lock == B_TRUE) {
 			zoff_hash_context_write_unlock(&ZOFF_HANDLES);
-		} else {
-			zoff_hash_context_read_unlock(&ZOFF_HANDLES);
 		}
 		return (ZOFF_ERROR);
 	}
@@ -443,18 +431,14 @@ zoff_onload_abd_private(abd_t *abd, size_t size,
 
 	if (lock == B_TRUE) {
 		zoff_hash_context_write_unlock(&ZOFF_HANDLES);
-	} else {
-		zoff_hash_context_read_unlock(&ZOFF_HANDLES);
 	}
 
-	if (remove) {
-		/*
-		 * if success, no more need for zhe
-		 * if failure, can't do anything with
-		 * zhe in any case, so destroy it
-		 */
-		destroy_zhe(zhe);
-	}
+	/*
+	 * if success, no more need for zhe
+	 * if failure, can't do anything with
+	 * zhe in any case, so destroy it
+	 */
+	destroy_zhe(zhe);
 
 	return ((rc == 0)?ZOFF_OK:ZOFF_ERROR);
 }
@@ -462,7 +446,7 @@ zoff_onload_abd_private(abd_t *abd, size_t size,
 int
 zoff_onload_abd(abd_t *abd, size_t size)
 {
-	return (zoff_onload_abd_private(abd, size, B_TRUE, B_TRUE));
+	return (zoff_onload_abd_private(abd, size, B_TRUE));
 }
 
 int
@@ -931,7 +915,7 @@ zoff_raidz_cleanup(zio_t *zio, raidz_row_t *rr)
 	 * place data into parent automatically
 	 */
 	zoff_onload_abd_private(zio->io_abd, zio->io_abd->abd_size,
-	    B_FALSE, B_TRUE);
+	    B_FALSE);
 
 	/* don't bring parity columns back */
 	/* raidz failed, so parity columns will be bad */
