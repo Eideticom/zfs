@@ -77,13 +77,11 @@ typedef struct zoff_functions {
 	    uint64_t spa_min_alloc, zcr_t *zoff_ret);
 
 	int (*decompress)(enum zio_compress alg,
-	    void *src, void *dst,
-	    int level);
+	    void *src, void *dst, int level);
 
 	struct {
 		int (*compute)(enum zio_checksum alg, zio_byteorder_t order,
-		    void *abd, size_t size, void *cksum, int handle_crypt,
-		    int insecure);
+		    void *abd, size_t size, void *cksum);
 
 		int (*error)(enum zio_checksum alg, zio_byteorder_t order,
 		    void *abd, void *cksum,
@@ -117,8 +115,7 @@ typedef struct zoff_functions {
 		    loff_t offset, ssize_t *resid, int *err);
 		int (*disk)(struct block_device *bdev, void *handle,
 		    size_t io_size, uint64_t io_offset, int rw,
-		    int failfast, int flags,
-		    void *zio);
+		    int failfast, int flags, void *zio);
 	} write;
 } zoff_functions_t;
 

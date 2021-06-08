@@ -62,12 +62,10 @@ int kernel_offloader_compress(enum zio_compress alg,
     uint64_t spa_min_alloc, void *ret);
 
 int kernel_offloader_decompress(enum zio_compress alg,
-    void *src, void *dst,
-    int level);
+    void *src, void *dst, int level);
 
 int kernel_offloader_checksum_compute(enum zio_checksum alg,
-    zio_byteorder_t order, void *data, size_t size, void *bp_cksum,
-    int handle_crypt, int insecure);
+    zio_byteorder_t order, void *data, size_t size, void *bp_cksum);
 
 int kernel_offloader_checksum_error(enum zio_checksum alg,
     zio_byteorder_t order, void *data, void *bp_cksum,

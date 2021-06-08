@@ -418,10 +418,7 @@ zio_checksum_compute(zio_t *zio, enum zio_checksum checksum,
 			zoff_alloc(zio->io_bp, sizeof (zio->io_bp->blk_cksum));
 
 			zoff_rc = zoff_checksum_compute(abd, checksum,
-			    ZIO_CHECKSUM_NATIVE, size, bp,
-			    (BP_USES_CRYPT(bp) &&
-			    BP_GET_TYPE(bp) != DMU_OT_OBJSET),
-			    insecure);
+			    ZIO_CHECKSUM_NATIVE, size, bp);
 		}
 
 		/* return here to leave the abd offloaded for the next stage */

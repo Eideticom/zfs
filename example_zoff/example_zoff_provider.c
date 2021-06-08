@@ -116,15 +116,13 @@ example_decompress(enum zio_compress alg,
 
 static int
 example_checksum_compute(enum zio_checksum alg,
-    zio_byteorder_t order, void *abd, size_t size, void *cksum,
-    int handle_crypt, int insecure)
+    zio_byteorder_t order, void *abd, size_t size, void *cksum)
 {
 	/* maybe translate alg and order */
 
 	/* trigger offloader to do actual calculation */
 	return translate_rc(kernel_offloader_checksum_compute(alg,
-	    order, abd, size, cksum,
-	    handle_crypt, insecure));
+	    order, abd, size, cksum));
 }
 
 static int

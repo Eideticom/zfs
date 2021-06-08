@@ -158,7 +158,7 @@ destroy_zhe(zhe_t *zhe)
 
 /*
  * create a mapping between a key and an
- *  offloader handle without copying data
+ * offloader handle without copying data
  */
 int
 zoff_alloc(void *key, size_t size)
@@ -639,8 +639,7 @@ zoff_compress(enum zio_compress c, abd_t *src,
 
 int
 zoff_checksum_compute(abd_t *abd, enum zio_checksum alg, zio_byteorder_t order,
-    uint64_t size, blkptr_t *bp,
-    boolean_t handle_crypt, boolean_t insecure)
+    uint64_t size, blkptr_t *bp)
 {
 	if (!zoff_provider || !zoff_provider->checksum.compute) {
 		return (ZOFF_FALLBACK);
@@ -664,8 +663,7 @@ zoff_checksum_compute(abd_t *abd, enum zio_checksum alg, zio_byteorder_t order,
 
 	/* trigger checksum operation in provider/offloader */
 	const int rc = zoff_provider->checksum.compute(alg, order,
-	    abd_zhe->handle, size, bp_cksum_zhe->handle,
-	    handle_crypt, insecure);
+	    abd_zhe->handle, size, bp_cksum_zhe->handle);
 
 	zoff_hash_context_read_unlock(&ZOFF_HANDLES);
 	return (rc);

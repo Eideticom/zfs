@@ -95,8 +95,7 @@ extern int zoff_compress(enum zio_compress c, abd_t *src,
     uint64_t *c_len, uint64_t spa_min_alloc);
 
 extern int zoff_checksum_compute(abd_t *abd, enum zio_checksum alg,
-    zio_byteorder_t order, uint64_t size, blkptr_t *bp,
-    boolean_t handle_crypt, boolean_t insecure);
+    zio_byteorder_t order, uint64_t size, blkptr_t *bp);
 
 /* raidz */
 extern void zoff_raidz_lock(void);

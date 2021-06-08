@@ -259,38 +259,8 @@ kernel_offloader_gang_add(void *gang_handle, void *new_member_handle)
 
 /* specific implementation */
 static int
-kernel_offloader_checksum_native(koh_t *data, size_t size,
-    uint64_t *checksum)
-{
-	/*
-	 * treat checksum as fletcher_4_ctx_t since scalar
-	 * (zio_cksum_t) is the first member of the struct
-	 */
-	fletcher_init((zio_cksum_t *)checksum);
-	fletcher_4_scalar_native((fletcher_4_ctx_t *)checksum,
-	    ptr_start(data, 0), size);
-	return (KERNEL_OFFLOADER_OK);
-}
-
-/* duplicate of zio_checksum_handle_crypt */
-static void
-kernel_offloader_checksum_handle_crypt(uint64_t *cksum,
-    uint64_t *saved, int xor)
-{
-	if (xor) {
-		cksum[0] ^= cksum[2];
-		cksum[1] ^= cksum[3];
-	}
-
-	cksum[2] = saved[2];
-	cksum[3] = saved[3];
-}
-
-/* specific implementation */
-static int
 kernel_offloader_gzip_compress(koh_t *src, koh_t *dst,
-    size_t s_len, int level,
-    size_t *c_len)
+    size_t s_len, int level, size_t *c_len)
 {
 	*c_len = LINEAR(dst).size;
 
@@ -308,8 +278,7 @@ kernel_offloader_gzip_compress(koh_t *src, koh_t *dst,
 /* specific implementation */
 static int
 kernel_offloader_gzip_decompress(koh_t *src, koh_t *dst,
-    int level,
-    size_t *c_len)
+    int level, size_t *c_len)
 {
 	if (z_uncompress(ptr_start(dst, 0), c_len, ptr_start(src, 0),
 	    LINEAR(src).size) != Z_OK) {
@@ -318,11 +287,6 @@ kernel_offloader_gzip_decompress(koh_t *src, koh_t *dst,
 
 	return (KERNEL_OFFLOADER_OK);
 }
-
-/* from zfs include/os/linux/spl/sys/sysmacros.h */
-#ifndef roundup
-#define	roundup(x, y)		((((x) + ((y) - 1)) / (y)) * (y))
-#endif
 
 int
 kernel_offloader_compress(enum zio_compress alg,
@@ -354,8 +318,7 @@ kernel_offloader_compress(enum zio_compress alg,
 
 int
 kernel_offloader_decompress(enum zio_compress alg,
-    void *src, void *dst,
-    int level)
+    void *src, void *dst, int level)
 {
 	int status = KERNEL_OFFLOADER_UNAVAILABLE;
 	koh_t *src_koh = unswizzle(src);
@@ -372,10 +335,24 @@ kernel_offloader_decompress(enum zio_compress alg,
 	return (status);
 }
 
+/* specific implementation */
+static int
+kernel_offloader_checksum_native(koh_t *data, size_t size,
+    uint64_t *checksum)
+{
+	/*
+	 * treat checksum as fletcher_4_ctx_t since scalar
+	 * (zio_cksum_t) is the first member of the struct
+	 */
+	fletcher_init((zio_cksum_t *)checksum);
+	fletcher_4_scalar_native((fletcher_4_ctx_t *)checksum,
+	    ptr_start(data, 0), size);
+	return (KERNEL_OFFLOADER_OK);
+}
+
 int
 kernel_offloader_checksum_compute(enum zio_checksum alg,
-    zio_byteorder_t order, void *data, size_t size, void *bp_cksum,
-    int handle_crypt, int insecure)
+    zio_byteorder_t order, void *data, size_t size, void *bp_cksum)
 {
 	koh_t *bp_cksum_koh = unswizzle(bp_cksum);
 	koh_t *data_koh = unswizzle(data);
@@ -399,10 +376,6 @@ kernel_offloader_checksum_compute(enum zio_checksum alg,
 	if (kernel_offloader_checksum_native(data_koh, size,
 	    cksum) != KERNEL_OFFLOADER_OK) {
 		return (KERNEL_OFFLOADER_ERROR);
-	}
-
-	if (handle_crypt) {
-		kernel_offloader_checksum_handle_crypt(cksum, saved, insecure);
 	}
 
 	/* copy checksum into bp */
