@@ -78,7 +78,7 @@ extern int zoff_offload_bp(blkptr_t *bp);
 extern int zoff_onload_bp(blkptr_t *bp);
 
 /* calls abd_iterate_func on the abd to copy abd data back and forth */
-extern void *zoff_offload_abd(abd_t *abd, size_t size);
+extern int zoff_offload_abd(abd_t *abd, size_t size);
 extern int zoff_onload_abd(abd_t *abd, size_t size);
 
 /* remap an offloader buffer */

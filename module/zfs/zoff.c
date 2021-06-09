@@ -404,10 +404,10 @@ zoff_offload_abd_private(abd_t *abd, size_t size, boolean_t lock)
 	return (zhe);
 }
 
-void *
+int
 zoff_offload_abd(abd_t *abd, size_t size)
 {
-	return (zoff_offload_abd_private(abd, size, B_TRUE));
+	return (zoff_offload_abd_private(abd, size, B_TRUE)?ZOFF_OK:ZOFF_ERROR);
 }
 
 /* move zoff buffer back into abd */
@@ -986,11 +986,14 @@ zoff_create_gang(abd_t *gang)
 		return (ZOFF_ERROR);
 	}
 
+	zoff_hash_context_write_lock(&ZOFF_HANDLES);
+
 	/* offload each child abd */
 	for (abd_t *cabd = list_head(&ABD_GANG(gang).abd_gang_chain);
 	    cabd != NULL;
 	    cabd = list_next(&ABD_GANG(gang).abd_gang_chain, cabd)) {
-		zhe_t *cabd_zhe = zoff_offload_abd(cabd, cabd->abd_size);
+		zhe_t *cabd_zhe = zoff_offload_abd_private(cabd,
+		    cabd->abd_size, B_FALSE);
 		if (!cabd_zhe) {
 			/* if offload failed, let abd_free clean up cabd */
 			destroy_zhe(gang_zhe);
@@ -1001,10 +1004,9 @@ zoff_create_gang(abd_t *gang)
 	}
 
 	/* register gang */
-	zoff_hash_context_write_lock(&ZOFF_HANDLES);
 	zoff_hash_register_offload(&ZOFF_HANDLES, gang_zhe);
-	zoff_hash_context_write_unlock(&ZOFF_HANDLES);
 
+	zoff_hash_context_write_unlock(&ZOFF_HANDLES);
 	return (ZOFF_OK);
 }
 
