@@ -5,13 +5,6 @@
 /* Need stuff from zfs_fletcher.h */
 #include <zfs_fletcher.h>
 
-/*
- * Use ZFS implementation of fletcher instead of reimplementing
- * Did not want to change zfs_fletcher.h to get this function prototype
- */
-extern void fletcher_4_scalar_native(fletcher_4_ctx_t *ctx,
-	const void *buf, uint64_t size);
-
 /* Not including sys/zio_compresss.h because it would bring in abds */
 extern int z_compress_level(void *dest, size_t *destLen, const void *source,
     size_t sourceLen, int level);
@@ -333,6 +326,30 @@ kernel_offloader_decompress(enum zio_compress alg,
 	}
 
 	return (status);
+}
+
+/* copied from module/zcommon/zfs_fletcher.c */
+static void
+fletcher_4_scalar_native(fletcher_4_ctx_t *ctx, const void *buf,
+    uint64_t size)
+{
+	const uint32_t *ip = buf;
+	const uint32_t *ipend = ip + (size / sizeof (uint32_t));
+	uint64_t a, b, c, d;
+
+	a = ctx->scalar.zc_word[0];
+	b = ctx->scalar.zc_word[1];
+	c = ctx->scalar.zc_word[2];
+	d = ctx->scalar.zc_word[3];
+
+	for (; ip < ipend; ip++) {
+		a += ip[0];
+		b += a;
+		c += b;
+		d += c;
+	}
+
+	ZIO_SET_CHECKSUM(&ctx->scalar, a, b, c, d);
 }
 
 /* specific implementation */

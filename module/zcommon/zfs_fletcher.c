@@ -146,10 +146,7 @@
 
 static void fletcher_4_scalar_init(fletcher_4_ctx_t *ctx);
 static void fletcher_4_scalar_fini(fletcher_4_ctx_t *ctx, zio_cksum_t *zcp);
-#ifndef ZOFF
-static
-#endif
-void fletcher_4_scalar_native(fletcher_4_ctx_t *ctx,
+static void fletcher_4_scalar_native(fletcher_4_ctx_t *ctx,
     const void *buf, uint64_t size);
 static void fletcher_4_scalar_byteswap(fletcher_4_ctx_t *ctx,
     const void *buf, uint64_t size);
@@ -316,10 +313,7 @@ fletcher_4_scalar_fini(fletcher_4_ctx_t *ctx, zio_cksum_t *zcp)
 	memcpy(zcp, &ctx->scalar, sizeof (zio_cksum_t));
 }
 
-#ifndef ZOFF
-static
-#endif
-void
+static void
 fletcher_4_scalar_native(fletcher_4_ctx_t *ctx, const void *buf,
     uint64_t size)
 {
@@ -994,8 +988,4 @@ EXPORT_SYMBOL(fletcher_4_byteswap);
 EXPORT_SYMBOL(fletcher_4_incremental_native);
 EXPORT_SYMBOL(fletcher_4_incremental_byteswap);
 EXPORT_SYMBOL(fletcher_4_abd_ops);
-
-#ifdef ZOFF
-EXPORT_SYMBOL(fletcher_4_scalar_native);
-#endif
 #endif
