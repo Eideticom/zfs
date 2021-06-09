@@ -108,16 +108,11 @@ zhe_t *zoff_hash_find_and_remove(zhc_t *ctx, const void *key) {
 
 /* add only - do not create */
 void zoff_hash_register_offload(zhc_t *ctx, zhe_t *zhe) {
-	zhe_t *found = zoff_hash_find_mapping(ctx, zhe->ptr);
-	if (found) {
-#ifdef _KERNEL
-		printk("Existing offloader entry with this "
-		    "kernel space address (%p) found. "
-			"Nothing done.\n", zhe->ptr);
-#endif
-	} else {
-		HASH_ADD_PTR(ctx->table, ptr, zhe);
-	}
+	/*
+	 * not checking for duplicates
+	 * zoff.c should always be checking before registering
+	 */
+	HASH_ADD_PTR(ctx->table, ptr, zhe);
 }
 
 /* remove only - do not free */
