@@ -344,21 +344,6 @@ vdev_raidz_map_alloc(zio_t *zio, uint64_t ashift, uint64_t dcols,
 	/* init RAIDZ parity ops */
 	rm->rm_ops = vdev_raidz_math_get_ops();
 
-#ifdef ZOFF
-	if ((zio->io_prop.zp_zoff.raidz1_gen == 1) ||
-	    (zio->io_prop.zp_zoff.raidz2_gen == 1) ||
-	    (zio->io_prop.zp_zoff.raidz3_gen == 1)) {
-		/* offload if not already offloaded */
-		zoff_offload_abd(zio->io_abd, zio->io_size);
-
-		zoff_raidz_lock();
-		if (zoff_raidz_alloc(zio, rr) != ZOFF_OK) {
-			zoff_raidz_cleanup(zio, rr);
-		}
-		zoff_raidz_unlock();
-	}
-#endif
-
 	return (rm);
 }
 
@@ -1550,19 +1535,26 @@ vdev_raidz_io_start_write(zio_t *zio, raidz_row_t *rr, uint64_t ashift)
 	raidz_map_t *rm = zio->io_vsd;
 	int c, i;
 
+#ifdef ZOFF
 	/*
 	 * here instead of vdev_raidz_generate_parity_row
 	 * to be able to use zio
 	 */
-#ifdef ZOFF
+	int zoff_rc = ZOFF_FALLBACK;
 	zoff_raidz_lock();
-	if (zoff_raidz_gen(zio, rr) != ZOFF_OK) {
+	if ((zoff_raidz_alloc(zio, rr) == ZOFF_OK) &&
+	    (zoff_raidz_gen(zio, rr)   == ZOFF_OK)) {
+		zoff_rc = ZOFF_OK;
+	} else {
 		zoff_raidz_cleanup(zio, rr);
+	}
+	zoff_raidz_unlock();
+
+	if (zoff_rc != ZOFF_OK) {
 #endif
 	vdev_raidz_generate_parity_row(rm, rr);
 #ifdef ZOFF
 	}
-	zoff_raidz_unlock();
 #endif
 
 	for (c = 0; c < rr->rr_cols; c++) {

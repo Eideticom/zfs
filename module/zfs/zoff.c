@@ -359,8 +359,8 @@ zoff_onload_cb(void *buf, size_t size, void *private)
 }
 
 /* record a new abd -> zoff handle mapping */
-void *
-zoff_offload_abd(abd_t *abd, size_t size)
+static zhe_t *
+zoff_offload_abd_private(abd_t *abd, size_t size, boolean_t lock)
 {
 	if (!zoff_provider) {
 		return (NULL);
@@ -370,12 +370,16 @@ zoff_offload_abd(abd_t *abd, size_t size)
 		return (NULL);
 	}
 
-	zoff_hash_context_write_lock(&ZOFF_HANDLES);
+	if (lock == B_TRUE) {
+		zoff_hash_context_write_lock(&ZOFF_HANDLES);
+	}
 
 	zhe_t *zhe = zoff_hash_find_mapping(&ZOFF_HANDLES, abd);
 	if (zhe) {
 		/* already offloaded */
-		zoff_hash_context_write_unlock(&ZOFF_HANDLES);
+		if (lock == B_TRUE) {
+			zoff_hash_context_write_unlock(&ZOFF_HANDLES);
+		}
 		return (zhe);
 	}
 
@@ -384,7 +388,9 @@ zoff_offload_abd(abd_t *abd, size_t size)
 	/* offload */
 	zmv_t mv = { .handle = zhe->handle, .offset = 0 };
 	if (abd_iterate_func(abd, 0, size, zoff_offload_cb, &mv) != 0) {
-		zoff_hash_context_write_unlock(&ZOFF_HANDLES);
+		if (lock == B_TRUE) {
+			zoff_hash_context_write_unlock(&ZOFF_HANDLES);
+		}
 		destroy_zhe(zhe);
 		return (NULL);
 	}
@@ -392,8 +398,16 @@ zoff_offload_abd(abd_t *abd, size_t size)
 	/* record this mapping */
 	zoff_hash_register_offload(&ZOFF_HANDLES, zhe);
 
-	zoff_hash_context_write_unlock(&ZOFF_HANDLES);
+	if (lock == B_TRUE) {
+		zoff_hash_context_write_unlock(&ZOFF_HANDLES);
+	}
 	return (zhe);
+}
+
+void *
+zoff_offload_abd(abd_t *abd, size_t size)
+{
+	return (zoff_offload_abd_private(abd, size, B_TRUE));
 }
 
 /* move zoff buffer back into abd */
@@ -730,9 +744,10 @@ zoff_raidz_alloc(zio_t *zio, raidz_row_t *rr)
 		return (ZOFF_FALLBACK);
 	}
 
-	/* find the source data on the offloader */
-	zhe_t *found = zoff_hash_find_mapping(&ZOFF_HANDLES, zio->io_abd);
-	if (!found) {
+	/* offload the source data if it hasn't already been offloaded */
+	zhe_t *abd_zhe = zoff_offload_abd_private(zio->io_abd,
+	    zio->io_size, B_FALSE);
+	if (!abd_zhe) {
 		return (ZOFF_ERROR);
 	}
 
@@ -746,7 +761,7 @@ zoff_raidz_alloc(zio_t *zio, raidz_row_t *rr)
 		return (ZOFF_ERROR);
 	}
 
-	boolean_t good = found?B_TRUE:B_FALSE;
+	boolean_t good = B_TRUE;
 
 	/* allocate new space for parity */
 	for (uint64_t c = 0; (c < rr->rr_firstdatacol) && (good == B_TRUE);
@@ -783,7 +798,7 @@ zoff_raidz_alloc(zio_t *zio, raidz_row_t *rr)
 		}
 
 		/* create an offloader reference */
-		zhe->handle = zoff_provider->alloc_ref(found->handle, off,
+		zhe->handle = zoff_provider->alloc_ref(abd_zhe->handle, off,
 		    rr->rr_col[c].rc_size);
 
 		/* assign this reference to column c */
