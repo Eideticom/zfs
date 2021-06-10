@@ -9,14 +9,14 @@
 #include <linux/types.h>
 #else
 #include <stdint.h>
-
-struct block_device;
 #endif
 
 #include <sys/zfs_file.h>
 #include <sys/zio_checksum_enums.h>
 #include <sys/zio_compress_enums.h>
 #include <sys/zoff_common.h>
+
+struct block_device;
 
 /*
  * use this struct to copy data to and from offloader memory
